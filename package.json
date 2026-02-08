@@ -9,7 +9,8 @@
   ],
   "scripts": {
     "build:cli": "npm run build --workspace=cli",
-    "dev:hub": "npm run dev --workspace=hub"
+    "dev:hub": "npm run dev --workspace=hub",
+    "arcadeforge": "node cli/dist/index.js"
   },
   "keywords": ["game", "arcade", "html5", "canvas", "generator", "cli"],
   "license": "MIT"

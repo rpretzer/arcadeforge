@@ -9,7 +9,8 @@
 ## Commands
 - **Build CLI:** `npm run build:cli`
 - **Run Hub:** `npm run dev:hub`
-- **Game Dev:** `node cli/dist/index.js [create|serve|remix|deploy]`
+- **Game Dev (Local):** `node cli/dist/index.js [create|serve|remix|deploy]`
+- **Global Link:** `cd cli && npm link` (May require sudo)
 
 ## Project Structure
 - `cli/src/`

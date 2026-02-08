@@ -42,8 +42,12 @@
 3.  **Build and Run:**
     ```bash
     npm run build:cli
-    # Use the linked binary or run via node
-    node cli/dist/index.js create
+    
+    # Run the CLI from the project root
+    npm run arcadeforge -- create
+    
+    # To run specifically from within a game directory:
+    # node /path/to/arcadeforge/cli/dist/index.js serve
     ```
 
 ## 📜 License
