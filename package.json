@@ -1,0 +1,16 @@
+{
+  "name": "arcadeforge",
+  "version": "0.1.0",
+  "description": "AI-assisted game creation tool. Idea → playable browser game → community hub.",
+  "private": true,
+  "workspaces": [
+    "cli",
+    "hub"
+  ],
+  "scripts": {
+    "build:cli": "npm run build --workspace=cli",
+    "dev:hub": "npm run dev --workspace=hub"
+  },
+  "keywords": ["game", "arcade", "html5", "canvas", "generator", "cli"],
+  "license": "MIT"
+}
