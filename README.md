@@ -28,26 +28,25 @@
 
 ## 🚦 Getting Started
 
-1.  **Clone the repo and install dependencies:**
+1.  **Install and Build:**
     ```bash
     npm install
     ```
+    *This will automatically install all workspace dependencies and build the CLI.*
 
-2.  **Set your API keys:**
+2.  **Initialize Configuration:**
     ```bash
-    export GOOGLE_API_KEY=your_gemini_key
-    export STABILITY_API_KEY=your_stability_key
+    npm run setup
     ```
+    *Then, open the generated `.env` file and add your API keys.*
 
-3.  **Build and Run:**
+3.  **Run ArcadeForge:**
     ```bash
-    npm run build:cli
-    
-    # Run the CLI from the project root
+    # From the project root
     npm run arcadeforge -- create
     
-    # To run specifically from within a game directory:
-    # node /path/to/arcadeforge/cli/dist/index.js serve
+    # Or link it globally to use 'arcadeforge' command anywhere
+    cd cli && npm link
     ```
 
 ## 📜 License
