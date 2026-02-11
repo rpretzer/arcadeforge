@@ -83,8 +83,9 @@ export function getAvailableProviders(): string[] {
   if (process.env.GOOGLE_API_KEY) providers.push('google');
   if (process.env.OPENAI_API_KEY) providers.push('openai');
   if (process.env.ANTHROPIC_API_KEY) providers.push('anthropic');
-  // Ollama doesn't need an API key — it's always "available" if the user wants it
-  providers.push('ollama');
+  // Ollama is only auto-detected if explicitly enabled via env var
+  // Users can always select it via `arcadeforge config`
+  if (process.env.OLLAMA_HOST) providers.push('ollama');
   return providers;
 }
 

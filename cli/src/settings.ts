@@ -54,7 +54,17 @@ export async function getOrPromptConfig(forceReprompt = false): Promise<Provider
   });
 
   let apiKey: string | undefined;
-  if (provider !== 'ollama') {
+  let baseUrl: string | undefined;
+
+  if (provider === 'ollama') {
+    const urlInput = await input({
+      message: 'Ollama URL',
+      default: 'http://localhost:11434',
+    });
+    if (urlInput.trim() && urlInput.trim() !== 'http://localhost:11434') {
+      baseUrl = urlInput.trim();
+    }
+  } else {
     const keyInput = await input({
       message: `API key for ${provider} (leave blank to use env var)`,
     });
@@ -67,6 +77,7 @@ export async function getOrPromptConfig(forceReprompt = false): Promise<Provider
     provider,
     model,
     ...(apiKey ? { apiKey } : {}),
+    ...(baseUrl ? { baseUrl } : {}),
   };
 
   saveConfig(config);
