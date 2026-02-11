@@ -15,8 +15,21 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 function resize() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  canvas.width = Math.min(window.innerWidth, config.arena.width);
+  canvas.height = Math.min(window.innerHeight, config.arena.height);
+
+  // Center the canvas if it's smaller than the viewport
+  if (canvas.width < window.innerWidth || canvas.height < window.innerHeight) {
+    canvas.style.position = 'absolute';
+    canvas.style.left = '50%';
+    canvas.style.top = '50%';
+    canvas.style.transform = 'translate(-50%, -50%)';
+  } else {
+    canvas.style.position = '';
+    canvas.style.left = '';
+    canvas.style.top = '';
+    canvas.style.transform = '';
+  }
 }
 window.addEventListener('resize', resize);
 resize();
@@ -27,13 +40,15 @@ resize();
 const mouse = { x: canvas.width / 2, y: canvas.height / 2 };
 
 canvas.addEventListener('mousemove', (e) => {
-  mouse.x = e.clientX;
-  mouse.y = e.clientY;
+  const rect = canvas.getBoundingClientRect();
+  mouse.x = e.clientX - rect.left;
+  mouse.y = e.clientY - rect.top;
 });
 
 canvas.addEventListener('click', (e) => {
-  mouse.x = e.clientX;
-  mouse.y = e.clientY;
+  const rect = canvas.getBoundingClientRect();
+  mouse.x = e.clientX - rect.left;
+  mouse.y = e.clientY - rect.top;
   handleClick(mouse);
 });
 

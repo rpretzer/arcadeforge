@@ -5,7 +5,7 @@ import sharp from 'sharp';
 import type { GameDesignSnapshot } from './snapshot.js';
 
 const STABILITY_API_KEY = process.env.STABILITY_API_KEY;
-const ENGINE_ID = 'stable-diffusion-xl-1024-v1-0';
+const ENGINE_ID = 'stable-diffusion-xl-1024-v1-1';
 const API_HOST = 'https://api.stability.ai';
 
 async function generateStabilityImage(prompt: string, color: string): Promise<Buffer | null> {

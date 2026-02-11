@@ -3,6 +3,7 @@ import path from 'node:path';
 import chalk from 'chalk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { GameDesignSnapshot } from './snapshot.js';
+import { validateConfig } from './validation.js';
 
 const API_KEY = process.env.GOOGLE_API_KEY;
 
@@ -65,10 +66,20 @@ export async function runRemix(dir: string = '.') {
     const text = response.text();
     const jsonString = text.replace(/```json/g, '').replace(/```/g, '').trim();
     
-    // Validate
-    JSON.parse(jsonString);
+    // Parse and validate against genre-specific schema
+    const parsed = JSON.parse(jsonString);
+    const validation = validateConfig(snapshot.genre, parsed);
+    if (!validation.valid) {
+      console.error(chalk.red('\n❌ Remix failed: AI-generated config did not pass schema validation.'));
+      return;
+    }
 
     const configPath = path.join(targetDir, 'src', 'config.js');
+    const configBackupPath = path.join(targetDir, 'src', 'config.backup.js');
+    if (await fse.pathExists(configPath)) {
+      await fse.copy(configPath, configBackupPath);
+      console.log(chalk.dim('   Backed up existing config to config.backup.js'));
+    }
     const configContent = `// Game configuration — REMIXED by Gemini 2.0 Flash
 // Based on feedback: ${feedback.length} notes
 

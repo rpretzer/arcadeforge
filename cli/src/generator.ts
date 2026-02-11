@@ -1,10 +1,15 @@
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import fse from 'fs-extra';
 import chalk from 'chalk';
 import type { GameDesignSnapshot, Genre, ColorPalette } from './snapshot.js';
 import { getRunnerConfig } from './templates/runner.js';
 import { getArenaConfig } from './templates/arena.js';
 import { getPuzzleConfig } from './templates/puzzle.js';
+import { getStoryConfig } from './templates/story.js';
+import { getRPGConfig } from './templates/rpg.js';
+import { getTowerDefenseConfig } from './templates/tower-defense.js';
+import { getRacingConfig } from './templates/racing.js';
 import { generateConfigWithAI } from './ai.js';
 import { generateAssets } from './assets.js';
 
@@ -23,6 +28,14 @@ function getTemplateConfig(snapshot: GameDesignSnapshot): string {
       return getArenaConfig(snapshot);
     case 'puzzle':
       return getPuzzleConfig(snapshot);
+    case 'story':
+      return getStoryConfig(snapshot);
+    case 'rpg':
+      return getRPGConfig(snapshot);
+    case 'tower-defense':
+      return getTowerDefenseConfig(snapshot);
+    case 'racing':
+      return getRacingConfig(snapshot);
   }
 }
 
@@ -46,10 +59,15 @@ export async function generateGame(
   await fse.ensureDir(targetDir);
 
   // Determine template source directory
-  const templatesRoot = path.resolve(
-    new URL(import.meta.url).pathname,
-    '..', '..', '..', 'templates',
-  );
+  // Try multiple locations to support both local dev and npx/global install:
+  // 1. Sibling to dist/ (cli/templates/ — copied during build for npx)
+  // 2. Repo root (../../templates from dist/ — local dev)
+  const currentDir = path.dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    path.resolve(currentDir, '..', 'templates'),       // cli/templates (npx/global)
+    path.resolve(currentDir, '..', '..', 'templates'),  // repo root (local dev)
+  ];
+  const templatesRoot = candidates.find(c => fse.pathExistsSync(c)) ?? candidates[1];
   const templateDir = path.join(templatesRoot, snapshot.genre);
 
   // Check template exists

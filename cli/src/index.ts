@@ -1,44 +1,141 @@
 #!/usr/bin/env node
 
 import 'dotenv/config';
+import { createRequire } from 'node:module';
 import chalk from 'chalk';
-import { select } from '@inquirer/prompts';
+import { select, confirm } from '@inquirer/prompts';
 import { runQuestionnaire, confirmSnapshot, type QuestionnaireAnswers } from './questionnaire.js';
-import { buildSnapshot } from './snapshot.js';
+import { buildSnapshot, type Genre, type Vibe } from './snapshot.js';
 import { generateGame } from './generator.js';
 import { runPlaytest } from './playtest.js';
 import { runDeploy } from './deploy.js';
 import { serveGame } from './serve.js';
 import { runCreativeConversation } from './conversation.js';
 import { runRemix } from './remix.js';
+import { resolveProviderConfig } from './providers/index.js';
+import { getOrPromptConfig } from './settings.js';
+
+const require = createRequire(import.meta.url);
+const { version } = require('../package.json') as { version: string };
+
+const g = chalk.greenBright;
+const c = chalk.cyanBright;
+const m = chalk.magentaBright;
 
 const BANNER = `
-${chalk.bold.cyan('🎮 ArcadeForge')}
-${chalk.dim("Let's build your game in a few minutes.")}
+${g('    ╔══════════════════════════════════════════╗')}
+${g('    ║')}${c('  ░█▀█░█▀▄░█▀▀░█▀█░█▀▄░█▀▀')}              ${g('║')}
+${g('    ║')}${c('  ░█▀█░█▀▄░█░░░█▀█░█░█░█▀▀')}              ${g('║')}
+${g('    ║')}${c('  ░▀░▀░▀░▀░▀▀▀░▀░▀░▀▀░░▀▀▀')}              ${g('║')}
+${g('    ║')}${m('  ░█▀▀░█▀█░█▀▄░█▀▀░█▀▀')}                 ${g('║')}
+${g('    ║')}${m('  ░█▀▀░█░█░█▀▄░█░█░█▀▀')}                 ${g('║')}
+${g('    ║')}${m('  ░▀░░░▀▀▀░▀░▀░▀▀▀░▀▀▀')}                 ${g('║')}
+${g('    ║')}                                          ${g('║')}
+${g('    ║')}  ${chalk.bold.yellowBright('AI-Powered Game Creation')}  ${chalk.dim(`v${version}`)}     ${g('║')}
+${g('    ╚══════════════════════════════════════════╝')}
 `;
 
-async function commandCreate(flags: { noAssets?: boolean }): Promise<void> {
-  console.log(BANNER);
+function pickRandom<T>(arr: readonly T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)] as T;
+}
 
-  const mode = await select({
-    message: 'How would you like to design your game?',
-    choices: [
-      { name: 'Standard Wizard (Quick questions)', value: 'wizard' as const },
-      { name: 'Creative Partner (Conversational AI chat)', value: 'chat' as const },
-    ],
-  });
+function generateQuickDefaults(): QuestionnaireAnswers {
+  const genres: Genre[] = ['runner', 'arena', 'puzzle', 'rpg', 'tower-defense', 'racing'];
+  const vibes: Vibe[] = ['retro', 'cozy', 'dark', 'neon', 'minimal'];
+  const genre = pickRandom(genres);
+  const vibe = pickRandom(vibes);
+
+  const titles: Record<string, string[]> = {
+    runner: ['Pixel Dash', 'Neon Sprint', 'Sky Hopper'],
+    arena: ['Blast Zone', 'Star Arena', 'Neon Siege'],
+    puzzle: ['Color Crush', 'Match Frenzy', 'Gem Grid'],
+    rpg: ['Realm Quest', 'Dungeon Strider', 'Crystal Saga'],
+    'tower-defense': ['Castle Guard', 'Siege Breaker', 'Turret Tide'],
+    racing: ['Nitro Circuit', 'Drift Kings', 'Speed Demon'],
+  };
+
+  return {
+    genre,
+    vibe,
+    title: pickRandom(titles[genre] ?? ['Arcade Game']),
+    playerCount: 'single',
+    sessionLength: 'short',
+    input: 'keyboard',
+    difficulty: 'moderate',
+    visualStyle: pickRandom(['geometric', 'pixel', 'hand-drawn'] as const),
+    scope: 'mvp',
+    customNotes: '',
+  };
+}
+
+async function commandCreate(flags: { noAssets?: boolean; quick?: boolean }): Promise<void> {
+  console.log(BANNER);
 
   let answers: QuestionnaireAnswers;
 
-  if (mode === 'chat') {
-    if (!process.env.GOOGLE_API_KEY) {
-      console.log(chalk.yellow('\n⚠️ GOOGLE_API_KEY not found. Falling back to Standard Wizard.'));
-      answers = await runQuestionnaire();
-    } else {
-      answers = await runCreativeConversation();
-    }
+  if (flags.quick) {
+    // Quick start: skip all prompts, generate with random defaults
+    answers = generateQuickDefaults();
+    console.log(chalk.cyan(`   Quick start: generating a ${answers.vibe} ${answers.genre} game called "${answers.title}"\n`));
   } else {
-    answers = await runQuestionnaire();
+    // Check for AI provider availability
+    const providerConfig = resolveProviderConfig();
+
+    let mode: 'wizard' | 'chat' | 'quick' | 'config';
+
+    if (!providerConfig) {
+      // Graceful no-API-key flow
+      console.log(chalk.yellow('  No AI provider set up yet.') + chalk.dim(' You can:\n'));
+      mode = await select<'config' | 'wizard' | 'quick'>({
+        message: 'How would you like to proceed?',
+        choices: [
+          { name: 'Set up AI provider now', value: 'config' },
+          { name: 'Continue with manual wizard', value: 'wizard' },
+          { name: 'Quick start with defaults', value: 'quick' },
+        ],
+      });
+
+      if (mode === 'config') {
+        await getOrPromptConfig(true);
+        console.log('');
+        // After config, offer the full choice again
+        mode = await select({
+          message: 'How would you like to design your game?',
+          choices: [
+            { name: 'Standard Wizard (Quick questions)', value: 'wizard' as const },
+            { name: 'Creative Partner (Conversational AI chat)', value: 'chat' as const },
+          ],
+        });
+      } else if (mode === 'quick') {
+        answers = generateQuickDefaults();
+        console.log(chalk.cyan(`\n   Quick start: generating a ${answers.vibe} ${answers.genre} game called "${answers.title}"\n`));
+        const snapshot = buildSnapshot(answers);
+        const targetDir = await generateGame(snapshot, undefined, flags.noAssets);
+        await promptAutoServe(targetDir);
+        return;
+      }
+    } else {
+      mode = await select({
+        message: 'How would you like to design your game?',
+        choices: [
+          { name: 'Standard Wizard (Quick questions)', value: 'wizard' as const },
+          { name: 'Creative Partner (Conversational AI chat)', value: 'chat' as const },
+        ],
+      });
+    }
+
+    if (mode === 'chat') {
+      const config = resolveProviderConfig();
+      if (!config) {
+        console.log(chalk.yellow('\nNo AI provider configured. Using Standard Wizard instead.'));
+        console.log(chalk.dim('   Run "arcadeforge config" to set up a provider.\n'));
+        answers = await runQuestionnaire();
+      } else {
+        answers = await runCreativeConversation();
+      }
+    } else {
+      answers = await runQuestionnaire();
+    }
   }
 
   const snapshot = buildSnapshot(answers);
@@ -55,21 +152,38 @@ async function commandCreate(flags: { noAssets?: boolean }): Promise<void> {
     console.log(chalk.white(`   Notes: ${snapshot.customNotes}`));
   }
 
-  const confirmed = await confirmSnapshot(snapshot as unknown as Record<string, unknown>);
-  if (!confirmed) {
-    console.log(chalk.yellow('\nNo worries — run arcadeforge create again when ready!'));
-    return;
+  if (!flags.quick) {
+    const confirmed = await confirmSnapshot(snapshot as unknown as Record<string, unknown>);
+    if (!confirmed) {
+      console.log(chalk.yellow('\nNo worries — run arcadeforge create again when ready!'));
+      return;
+    }
   }
 
   const targetDir = await generateGame(snapshot, undefined, flags.noAssets);
 
-  console.log(chalk.bold.green('\n🎉 Done! Run your game:'));
-  console.log(chalk.white(`   cd ${targetDir}`));
-  console.log(chalk.white(`   arcadeforge serve`));
-  console.log(chalk.dim(`\n   Next steps:`));
-  console.log(chalk.dim(`   • Edit src/config.js to tweak gameplay`));
-  console.log(chalk.dim(`   • Use the in-game feedback panel to take notes`));
-  console.log(chalk.dim(`   • Run "arcadeforge deploy" when ready to share`));
+  await promptAutoServe(targetDir);
+}
+
+async function promptAutoServe(targetDir: string): Promise<void> {
+  console.log(chalk.bold.green('\n🎉 Done! Your game is ready.'));
+
+  const playNow = await confirm({
+    message: 'Want to play it now?',
+    default: true,
+  });
+
+  if (playNow) {
+    await serveGame(targetDir);
+  } else {
+    console.log(chalk.white(`\n   To play later:`));
+    console.log(chalk.white(`   cd ${targetDir}`));
+    console.log(chalk.white(`   arcadeforge serve`));
+    console.log(chalk.dim(`\n   Next steps:`));
+    console.log(chalk.dim(`   • Edit src/config.js to tweak gameplay`));
+    console.log(chalk.dim(`   • Use the in-game feedback panel to take notes`));
+    console.log(chalk.dim(`   • Run "arcadeforge deploy" when ready to share`));
+  }
 }
 
 async function main(): Promise<void> {
@@ -77,26 +191,32 @@ async function main(): Promise<void> {
   const command = args[0] ?? 'create';
   const flags = {
     noAssets: args.includes('--no-assets') || args.includes('-n'),
+    quick: args.includes('--quick') || args.includes('-q'),
   };
 
   switch (command) {
     case 'create':
       await commandCreate(flags);
       break;
-    case 'serve':
+    case 'serve': {
       // Filter out flags from potential directory path
       const targetDir = args.slice(1).find(a => !a.startsWith('-')) ?? '.';
       await serveGame(targetDir);
       break;
+    }
     case 'playtest':
       await runPlaytest();
       break;
     case 'deploy':
       await runDeploy();
       break;
-    case 'remix':
+    case 'remix': {
       const remixDir = process.argv[3] ?? '.';
       await runRemix(remixDir);
+      break;
+    }
+    case 'config':
+      await getOrPromptConfig(true);
       break;
     case '--help':
     case '-h':
@@ -107,7 +227,12 @@ async function main(): Promise<void> {
       console.log('  remix      Iterate on your game using AI and feedback');
       console.log('  playtest   Run a structured playtest session');
       console.log('  deploy     Generate deployment configs');
+      console.log('  config     Configure AI provider and model');
       console.log('  --help     Show this help message');
+      console.log('');
+      console.log(chalk.bold('Flags:'));
+      console.log('  --quick, -q      Skip all prompts, generate with random defaults');
+      console.log('  --no-assets, -n  Skip AI asset generation');
       break;
     default:
       console.log(chalk.red(`Unknown command: ${command}`));

@@ -7,9 +7,6 @@
     "cli",
     "hub"
   ],
-  "bin": {
-    "arcadeforge": "./cli/dist/index.js"
-  },
   "scripts": {
     "prepare": "npm run build:cli",
     "setup": "cp .env.example .env && cp hub/.env.local.example hub/.env.local",

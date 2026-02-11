@@ -7,7 +7,9 @@ import type { GameDesignSnapshot } from './snapshot.js';
 
 type DeployTarget = 'github-pages' | 'netlify' | 'vercel' | 'manual';
 
-const HUB_API_URL = process.env.ARCADEFORGE_HUB_URL || 'http://localhost:3000/api/submit';
+// Set ARCADEFORGE_HUB_URL in your environment to point to your production hub.
+// Falls back to localhost for local development.
+const HUB_API_URL = process.env.ARCADEFORGE_HUB_URL || 'https://arcadeforge-hub.vercel.app/api/submit';
 
 const GITHUB_ACTIONS_WORKFLOW = `name: Deploy to GitHub Pages
 
@@ -204,7 +206,7 @@ export async function runDeploy(): Promise<void> {
         console.log(chalk.blue('   📦 Deploying via Vercel CLI...'));
         try {
           // vercel --prod --confirm returns the URL in stdout
-          const result = execSync('vercel --prod --confirm', { stdio: 'pipe' }).toString();
+          const result = execSync('vercel --prod --yes', { stdio: 'pipe' }).toString();
           const urlMatch = result.match(/https:\/\/[a-z0-9-]+\.vercel\.app/i);
           if (urlMatch) {
             deployedUrl = urlMatch[0];

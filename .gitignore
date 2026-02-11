@@ -12,3 +12,6 @@ coverage/
 .turbo/
 .vercel/
 .supabase/
+cli/templates/
+examples/
+pixel-dash/

@@ -1,4 +1,5 @@
 import type { GameDesignSnapshot, PuzzleMechanics } from '../snapshot.js';
+import { escapeJsString } from './escape.js';
 
 export function getPuzzleConfig(snapshot: GameDesignSnapshot): string {
   const m = snapshot.mechanics as PuzzleMechanics;
@@ -25,8 +26,7 @@ const config = {
     matchSize: ${m.matchSize},
   },
   game: {
-    title: '${snapshot.title.replace(/'/g, "\\'")}',
-    sessionLength: '${snapshot.sessionLength}',
+    title: '${escapeJsString(snapshot.title)}',
     timeLimit: ${m.timeLimit},
     difficultyProgression: ${m.difficultyProgression},
   },
@@ -34,6 +34,11 @@ const config = {
     matchBase: 100,
     comboMultiplier: 1.5,
     levelUpThreshold: 1000,
+    timeBonusThreshold: 500,
+  },
+  special: {
+    spawnChance: 0.05,
+    bombRadius: 1,
   },
   visual: {
     style: '${snapshot.visualStyle}',

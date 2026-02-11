@@ -20,7 +20,7 @@ import { getAsset } from './assets.js';
 // Data structures
 // ---------------------------------------------------------------------------
 
-/** Each cell: { colorIndex, x, y, targetX, targetY, falling, flashTimer, scale, opacity } */
+/** Each cell: { colorIndex, special, x, y, targetX, targetY, falling, flashTimer, scale, opacity } */
 let cells = [];         // 2-D array [col][row]
 const W = () => CONFIG.grid.width;
 const H = () => CONFIG.grid.height;
@@ -103,9 +103,20 @@ export function init(canvasWidth, canvasHeight) {
   return { gridOffsetX, gridOffsetY };
 }
 
+const SPECIAL_TYPES = ['bomb', 'rainbow', 'lightning'];
+
+function rollSpecial() {
+  const chance = CONFIG.special?.spawnChance ?? 0.05;
+  if (Math.random() < chance) {
+    return SPECIAL_TYPES[Math.floor(Math.random() * SPECIAL_TYPES.length)];
+  }
+  return null;
+}
+
 function makeCell(col, row, falling = false) {
   return {
     colorIndex: randomColor(),
+    special: falling ? rollSpecial() : null, // only spawned pieces can be special
     x: pixelX(col),
     y: falling ? pixelY(row - (H() + 1)) : pixelY(row),  // above screen if spawning
     targetX: pixelX(col),
@@ -147,6 +158,14 @@ function causesMatch(col, row) {
 // Match detection
 // ---------------------------------------------------------------------------
 
+function colorsMatch(c1, r1, c2, r2) {
+  const a = cells[c1]?.[r1];
+  const b = cells[c2]?.[r2];
+  if (!a || !b) return false;
+  if (a.special === 'rainbow' || b.special === 'rainbow') return true;
+  return a.colorIndex === b.colorIndex && a.colorIndex >= 0;
+}
+
 function findAllMatches() {
   const matched = new Set();
   const minMatch = CONFIG.grid.matchSize;
@@ -155,7 +174,7 @@ function findAllMatches() {
   for (let r = 0; r < H(); r++) {
     let run = 1;
     for (let c = 1; c < W(); c++) {
-      if (cells[c][r].colorIndex === cells[c - 1][r].colorIndex && cells[c][r].colorIndex >= 0) {
+      if (colorsMatch(c, r, c - 1, r)) {
         run++;
       } else {
         if (run >= minMatch) {
@@ -173,7 +192,7 @@ function findAllMatches() {
   for (let c = 0; c < W(); c++) {
     let run = 1;
     for (let r = 1; r < H(); r++) {
-      if (cells[c][r].colorIndex === cells[c][r - 1].colorIndex && cells[c][r].colorIndex >= 0) {
+      if (colorsMatch(c, r, c, r - 1)) {
         run++;
       } else {
         if (run >= minMatch) {
@@ -192,6 +211,11 @@ function findAllMatches() {
 
 /** Check if swapping (c1,r1) with (c2,r2) would produce at least one match. */
 function swapProducesMatch(c1, r1, c2, r2) {
+  // Rainbow pieces always produce a valid swap
+  const cellA = cells[c1]?.[r1];
+  const cellB = cells[c2]?.[r2];
+  if (cellA?.special === 'rainbow' || cellB?.special === 'rainbow') return true;
+
   // Temporarily swap
   const tmp = cells[c1][r1].colorIndex;
   cells[c1][r1].colorIndex = cells[c2][r2].colorIndex;
@@ -211,6 +235,7 @@ function swapProducesMatch(c1, r1, c2, r2) {
 // ---------------------------------------------------------------------------
 
 export function update(dt) {
+  specialAnimTimer += dt;
   switch (state) {
     case State.IDLE:
       handleInput();
@@ -399,6 +424,8 @@ function updateMatching(dt) {
   }
 
   if (flashTimer >= dur) {
+    // Trigger special piece effects before removing
+    applySpecialEffects();
     // Score this step
     Scoring.addMatch(matchedSet.size);
     state = State.REMOVING;
@@ -410,6 +437,41 @@ function updateRemoving(_dt) {
   // Instant transition into falling after removal
   applyGravity();
   state = State.FALLING;
+}
+
+// --- Special piece effects ---
+
+function applySpecialEffects() {
+  const extra = new Set();
+  for (const k of matchedSet) {
+    const [c, r] = k.split(',').map(Number);
+    const cell = cells[c]?.[r];
+    if (!cell || !cell.special) continue;
+
+    if (cell.special === 'bomb') {
+      // Clear 3x3 area centered on the bomb
+      const radius = CONFIG.special?.bombRadius ?? 1;
+      for (let dc = -radius; dc <= radius; dc++) {
+        for (let dr = -radius; dr <= radius; dr++) {
+          const nc = c + dc;
+          const nr = r + dr;
+          if (nc >= 0 && nc < W() && nr >= 0 && nr < H()) {
+            extra.add(key(nc, nr));
+          }
+        }
+      }
+    } else if (cell.special === 'lightning') {
+      // Clear entire row
+      for (let cc = 0; cc < W(); cc++) {
+        extra.add(key(cc, r));
+      }
+    }
+    // Rainbow has no extra clear effect (it just matches any color)
+  }
+  // Add extras to matchedSet
+  for (const k of extra) {
+    matchedSet.add(k);
+  }
 }
 
 // --- Remove matched pieces ---
@@ -593,6 +655,9 @@ export function draw(ctx) {
   }
 }
 
+// Animation timer for special piece effects (global, advances each frame)
+let specialAnimTimer = 0;
+
 function drawPiece(ctx, cell, size) {
   const color = CONFIG.colors.pieces[cell.colorIndex];
   if (!color) return;
@@ -610,7 +675,9 @@ function drawPiece(ctx, cell, size) {
   ctx.scale(s, s);
   ctx.translate(-cx, -cy);
 
-  if (sprite) {
+  if (cell.special) {
+    drawSpecialPiece(ctx, cell, size, cx, cy);
+  } else if (sprite) {
     ctx.drawImage(sprite, cell.x + 2, cell.y + 2, size - 4, size - 4);
   } else {
     // Shadow
@@ -644,6 +711,95 @@ function drawPiece(ctx, cell, size) {
   }
 
   ctx.restore();
+}
+
+function drawSpecialPiece(ctx, cell, size, cx, cy) {
+  const r = size / 2 - 3;
+
+  if (cell.special === 'bomb') {
+    // Dark circle with orange spark lines
+    ctx.fillStyle = '#1a1a2e';
+    ctx.shadowColor = '#ff6600';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Spark lines radiating outward
+    ctx.strokeStyle = '#ff8800';
+    ctx.lineWidth = 2;
+    const sparkCount = 6;
+    const angleOffset = specialAnimTimer * 0.002;
+    for (let i = 0; i < sparkCount; i++) {
+      const a = (Math.PI * 2 * i) / sparkCount + angleOffset;
+      const inner = r * 0.4;
+      const outer = r * 0.75;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
+      ctx.lineTo(cx + Math.cos(a) * outer, cy + Math.sin(a) * outer);
+      ctx.stroke();
+    }
+
+    // Center dot
+    ctx.fillStyle = '#ff6600';
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.2, 0, Math.PI * 2);
+    ctx.fill();
+
+  } else if (cell.special === 'rainbow') {
+    // Rotating color gradient
+    const angle = specialAnimTimer * 0.003;
+    if (typeof ctx.createConicGradient === 'function') {
+      const grad = ctx.createConicGradient(angle, cx, cy);
+      const pieces = CONFIG.colors.pieces;
+      for (let i = 0; i <= pieces.length; i++) {
+        grad.addColorStop(i / pieces.length, pieces[i % pieces.length]);
+      }
+      ctx.fillStyle = grad;
+    } else {
+      // Fallback: cycle through piece colors
+      const idx = Math.floor((specialAnimTimer / 200) % CONFIG.colors.pieces.length);
+      ctx.fillStyle = CONFIG.colors.pieces[idx];
+    }
+    ctx.shadowColor = '#ffffff';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // White star highlight in center
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.25, 0, Math.PI * 2);
+    ctx.fill();
+
+  } else if (cell.special === 'lightning') {
+    // Yellow base with zigzag bolt
+    ctx.fillStyle = '#facc15';
+    ctx.shadowColor = '#facc15';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Zigzag bolt
+    ctx.strokeStyle = '#1a1a2e';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    const boltH = size * 0.55;
+    const boltW = size * 0.22;
+    const top = cy - boltH / 2;
+    ctx.beginPath();
+    ctx.moveTo(cx + boltW * 0.1, top);
+    ctx.lineTo(cx - boltW * 0.3, top + boltH * 0.4);
+    ctx.lineTo(cx + boltW * 0.3, top + boltH * 0.45);
+    ctx.lineTo(cx - boltW * 0.1, top + boltH);
+    ctx.stroke();
+  }
 }
 
 function roundRect(ctx, x, y, w, h, r) {

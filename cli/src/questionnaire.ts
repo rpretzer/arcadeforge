@@ -28,6 +28,10 @@ const GENRE_NAMES: Record<Genre, string> = {
   runner: 'Endless Runner — dodge obstacles, chase high scores',
   arena: 'Arena Shooter — survive waves of enemies',
   puzzle: 'Puzzle — match pieces on a grid',
+  story: 'Story — narrative adventure with branching choices',
+  rpg: 'RPG — top-down adventure with combat, NPCs, and quests',
+  'tower-defense': 'Tower Defense — build towers, stop waves of enemies',
+  racing: 'Racing — top-down racing with opponents and laps',
 };
 
 const VIBE_NAMES: Record<Vibe, string> = {
@@ -42,6 +46,10 @@ const TITLE_SUGGESTIONS: Record<Genre, string[]> = {
   runner: ['Pixel Dash', 'Neon Sprint', 'Sky Hopper', 'Turbo Run'],
   arena: ['Blast Zone', 'Star Arena', 'Neon Siege', 'Bullet Storm'],
   puzzle: ['Color Crush', 'Match Frenzy', 'Gem Grid', 'Block Blitz'],
+  story: ['Shadow Path', 'Last Letter', 'Midnight Signal', 'Echo Chamber'],
+  rpg: ['Realm Quest', 'Dungeon Strider', 'Hollow Keep', 'Crystal Saga'],
+  'tower-defense': ['Castle Guard', 'Siege Breaker', 'Path Warden', 'Turret Tide'],
+  racing: ['Nitro Circuit', 'Drift Kings', 'Turbo Track', 'Speed Demon'],
 };
 
 export async function runQuestionnaire(): Promise<QuestionnaireAnswers> {
@@ -51,6 +59,10 @@ export async function runQuestionnaire(): Promise<QuestionnaireAnswers> {
       { value: 'runner' as const, name: GENRE_NAMES.runner },
       { value: 'arena' as const, name: GENRE_NAMES.arena },
       { value: 'puzzle' as const, name: GENRE_NAMES.puzzle },
+      { value: 'story' as const, name: GENRE_NAMES.story },
+      { value: 'rpg' as const, name: GENRE_NAMES.rpg },
+      { value: 'tower-defense' as const, name: GENRE_NAMES['tower-defense'] },
+      { value: 'racing' as const, name: GENRE_NAMES.racing },
     ],
   });
 

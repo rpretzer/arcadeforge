@@ -1,4 +1,4 @@
-export type Genre = 'runner' | 'arena' | 'puzzle';
+export type Genre = 'runner' | 'arena' | 'puzzle' | 'story' | 'rpg' | 'tower-defense' | 'racing';
 export type Vibe = 'retro' | 'cozy' | 'dark' | 'neon' | 'minimal';
 export type PlayerCount = 'single' | '2-local' | 'leaderboard-async';
 export type SessionLength = 'short' | 'medium';
@@ -26,6 +26,8 @@ export interface RunnerMechanics {
 export interface ArenaMechanics {
   playerSpeed: number;
   bulletSpeed: number;
+  bulletCooldown: number;
+  bulletSize: number;
   enemySpeed: number;
   spawnRate: number;
   arenaWidth: number;
@@ -41,7 +43,46 @@ export interface PuzzleMechanics {
   difficultyProgression: number;
 }
 
-export type Mechanics = RunnerMechanics | ArenaMechanics | PuzzleMechanics;
+export interface StoryMechanics {
+  textSpeed: number;
+  choiceTimeout: number;
+  sceneTransitionDuration: number;
+  maxSaveSlots: number;
+  enableAutoAdvance: boolean;
+  autoAdvanceDelay: number;
+}
+
+export interface RPGMechanics {
+  playerSpeed: number;
+  attackDamage: number;
+  attackCooldown: number;
+  playerMaxHealth: number;
+  enemyDensity: number;
+  mapWidth: number;
+  mapHeight: number;
+  inventorySize: number;
+}
+
+export interface TowerDefenseMechanics {
+  startingGold: number;
+  startingLives: number;
+  waveCount: number;
+  gridCols: number;
+  gridRows: number;
+  towerTypes: number;
+}
+
+export interface RacingMechanics {
+  topSpeed: number;
+  acceleration: number;
+  braking: number;
+  turnSpeed: number;
+  trackComplexity: number;
+  lapCount: number;
+  opponentCount: number;
+}
+
+export type Mechanics = RunnerMechanics | ArenaMechanics | PuzzleMechanics | StoryMechanics | RPGMechanics | TowerDefenseMechanics | RacingMechanics;
 
 export interface GameDesignSnapshot {
   title: string;
@@ -130,6 +171,8 @@ function getDefaultArenaMechanics(difficulty: Difficulty): ArenaMechanics {
     casual: {
       playerSpeed: 4,
       bulletSpeed: 8,
+      bulletCooldown: 200,
+      bulletSize: 5,
       enemySpeed: 1.5,
       spawnRate: 0.01,
       arenaWidth: 800,
@@ -139,6 +182,8 @@ function getDefaultArenaMechanics(difficulty: Difficulty): ArenaMechanics {
     moderate: {
       playerSpeed: 5,
       bulletSpeed: 10,
+      bulletCooldown: 150,
+      bulletSize: 5,
       enemySpeed: 2.5,
       spawnRate: 0.02,
       arenaWidth: 800,
@@ -148,6 +193,8 @@ function getDefaultArenaMechanics(difficulty: Difficulty): ArenaMechanics {
     challenging: {
       playerSpeed: 5,
       bulletSpeed: 12,
+      bulletCooldown: 120,
+      bulletSize: 4,
       enemySpeed: 3.5,
       spawnRate: 0.03,
       arenaWidth: 800,
@@ -185,6 +232,135 @@ function getDefaultPuzzleMechanics(difficulty: Difficulty): PuzzleMechanics {
   return presets[difficulty];
 }
 
+function getDefaultStoryMechanics(difficulty: Difficulty): StoryMechanics {
+  const presets: Record<Difficulty, StoryMechanics> = {
+    casual: {
+      textSpeed: 40,
+      choiceTimeout: 0,
+      sceneTransitionDuration: 800,
+      maxSaveSlots: 3,
+      enableAutoAdvance: true,
+      autoAdvanceDelay: 5,
+    },
+    moderate: {
+      textSpeed: 50,
+      choiceTimeout: 30,
+      sceneTransitionDuration: 600,
+      maxSaveSlots: 3,
+      enableAutoAdvance: false,
+      autoAdvanceDelay: 0,
+    },
+    challenging: {
+      textSpeed: 60,
+      choiceTimeout: 15,
+      sceneTransitionDuration: 400,
+      maxSaveSlots: 1,
+      enableAutoAdvance: false,
+      autoAdvanceDelay: 0,
+    },
+  };
+  return presets[difficulty];
+}
+
+function getDefaultRPGMechanics(difficulty: Difficulty): RPGMechanics {
+  const presets: Record<Difficulty, RPGMechanics> = {
+    casual: {
+      playerSpeed: 3,
+      attackDamage: 15,
+      attackCooldown: 400,
+      playerMaxHealth: 120,
+      enemyDensity: 2,
+      mapWidth: 800,
+      mapHeight: 600,
+      inventorySize: 8,
+    },
+    moderate: {
+      playerSpeed: 3.5,
+      attackDamage: 10,
+      attackCooldown: 500,
+      playerMaxHealth: 100,
+      enemyDensity: 3,
+      mapWidth: 800,
+      mapHeight: 600,
+      inventorySize: 6,
+    },
+    challenging: {
+      playerSpeed: 4,
+      attackDamage: 8,
+      attackCooldown: 600,
+      playerMaxHealth: 80,
+      enemyDensity: 4,
+      mapWidth: 800,
+      mapHeight: 600,
+      inventorySize: 5,
+    },
+  };
+  return presets[difficulty];
+}
+
+function getDefaultTowerDefenseMechanics(difficulty: Difficulty): TowerDefenseMechanics {
+  const presets: Record<Difficulty, TowerDefenseMechanics> = {
+    casual: {
+      startingGold: 200,
+      startingLives: 20,
+      waveCount: 8,
+      gridCols: 12,
+      gridRows: 8,
+      towerTypes: 4,
+    },
+    moderate: {
+      startingGold: 150,
+      startingLives: 15,
+      waveCount: 10,
+      gridCols: 14,
+      gridRows: 9,
+      towerTypes: 4,
+    },
+    challenging: {
+      startingGold: 100,
+      startingLives: 10,
+      waveCount: 12,
+      gridCols: 16,
+      gridRows: 10,
+      towerTypes: 4,
+    },
+  };
+  return presets[difficulty];
+}
+
+function getDefaultRacingMechanics(difficulty: Difficulty): RacingMechanics {
+  const presets: Record<Difficulty, RacingMechanics> = {
+    casual: {
+      topSpeed: 5,
+      acceleration: 0.08,
+      braking: 0.12,
+      turnSpeed: 0.04,
+      trackComplexity: 6,
+      lapCount: 2,
+      opponentCount: 1,
+    },
+    moderate: {
+      topSpeed: 6,
+      acceleration: 0.07,
+      braking: 0.1,
+      turnSpeed: 0.035,
+      trackComplexity: 8,
+      lapCount: 3,
+      opponentCount: 2,
+    },
+    challenging: {
+      topSpeed: 7,
+      acceleration: 0.06,
+      braking: 0.09,
+      turnSpeed: 0.03,
+      trackComplexity: 10,
+      lapCount: 3,
+      opponentCount: 3,
+    },
+  };
+  return presets[difficulty];
+}
+
 export function getDefaultMechanics(genre: Genre, difficulty: Difficulty): Mechanics {
   switch (genre) {
     case 'runner':
@@ -193,6 +369,14 @@ export function getDefaultMechanics(genre: Genre, difficulty: Difficulty): Mecha
       return getDefaultArenaMechanics(difficulty);
     case 'puzzle':
       return getDefaultPuzzleMechanics(difficulty);
+    case 'story':
+      return getDefaultStoryMechanics(difficulty);
+    case 'rpg':
+      return getDefaultRPGMechanics(difficulty);
+    case 'tower-defense':
+      return getDefaultTowerDefenseMechanics(difficulty);
+    case 'racing':
+      return getDefaultRacingMechanics(difficulty);
   }
 }
 
@@ -220,6 +404,10 @@ export function buildSnapshot(params: {
     runner: 'An endless runner where you dodge obstacles and chase high scores',
     arena: 'A top-down arena shooter with waves of enemies',
     puzzle: 'A grid-based match puzzle with increasing challenge',
+    story: 'A branching narrative adventure driven by player choices',
+    rpg: 'A top-down RPG adventure with combat, NPCs, and quests',
+    'tower-defense': 'A strategic tower defense game with waves of enemies',
+    racing: 'A top-down racing game with opponents and lap tracking',
   };
 
   return {

@@ -24,6 +24,9 @@ let gridTopY = 0;
 let blinkTimer = 0;
 
 let initialized = false;
+let paused = false;
+let hintTimer = 5000;
+let firstInput = false;
 
 export function init(cw, ch) {
   canvasWidth = cw;
@@ -33,6 +36,8 @@ export function init(cw, ch) {
     currentState = GameState.MENU;
     blinkTimer = 0;
     window.addEventListener('keydown', onKey);
+    window.addEventListener('mousedown', onPointerForHint);
+    window.addEventListener('touchstart', onPointerForHint);
     initialized = true;
   }
 }
@@ -43,8 +48,25 @@ export function resize(cw, ch) {
 }
 
 function onKey(e) {
+  if (currentState === GameState.PLAYING) {
+    if (!firstInput) {
+      firstInput = true;
+      hintTimer = 0;
+    }
+    if (e.key === 'p' || e.key === 'P') {
+      paused = !paused;
+      return;
+    }
+  }
   if (e.key === 'r' || e.key === 'R') {
     restartGame();
+  }
+}
+
+function onPointerForHint() {
+  if (currentState === GameState.PLAYING && !firstInput) {
+    firstInput = true;
+    hintTimer = 0;
   }
 }
 
@@ -56,8 +78,14 @@ export function startGame() {
 
   if (CONFIG.game.timeLimit > 0) {
     timeRemaining = CONFIG.game.timeLimit;
+    Scoring.onTimeBonus((seconds) => {
+      timeRemaining += seconds;
+    });
   }
 
+  paused = false;
+  hintTimer = 5000;
+  firstInput = false;
   currentState = GameState.PLAYING;
 }
 
@@ -99,6 +127,13 @@ function updateMenu(_dt) {
 }
 
 function updatePlaying(dt) {
+  if (paused) return;
+
+  // Count down hint timer (dt is in ms)
+  if (hintTimer > 0 && !firstInput) {
+    hintTimer -= dt;
+  }
+
   // Timer
   if (CONFIG.game.timeLimit > 0) {
     timeRemaining -= dt / 1000;
@@ -136,6 +171,10 @@ export function draw(ctx) {
 
     case GameState.PLAYING:
       drawPlaying(ctx);
+      drawControlHints(ctx);
+      if (paused) {
+        drawPauseOverlay(ctx);
+      }
       break;
 
     case GameState.GAMEOVER:
@@ -206,23 +245,96 @@ function drawPlaying(ctx, dimmed = false) {
   Grid.draw(ctx);
   Scoring.draw(ctx, canvasWidth, gridTopY);
 
-  // Timer
+  // Timer progress bar
   if (CONFIG.game.timeLimit > 0) {
+    const ratio = Math.min(timeRemaining / CONFIG.game.timeLimit, 1);
+    const barMargin = 20;
+    const barW = canvasWidth - barMargin * 2;
+    const barH = 10;
+    const barY = 8;
+
+    // Color based on remaining ratio
+    let barColor;
+    if (ratio > 0.5) barColor = '#22c55e';
+    else if (ratio > 0.25) barColor = '#eab308';
+    else barColor = '#ef4444';
+
+    // Pulse when under 10 seconds
+    let barAlpha = 1;
+    if (timeRemaining < 10) {
+      barAlpha = 0.5 + 0.5 * Math.abs(Math.sin(blinkTimer / 250 * Math.PI));
+    }
+
+    // Background track
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+    roundRect(ctx, barMargin, barY, barW, barH, 4);
+    ctx.fill();
+
+    // Filled portion
+    ctx.save();
+    ctx.globalAlpha = barAlpha;
+    ctx.fillStyle = barColor;
+    const fillW = Math.max(0, barW * ratio);
+    if (fillW > 0) {
+      roundRect(ctx, barMargin, barY, fillW, barH, 4);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // Time text
     const secs = Math.ceil(timeRemaining);
     const mins = Math.floor(secs / 60);
     const s = secs % 60;
     const timeStr = `${mins}:${String(s).padStart(2, '0')}`;
-
-    ctx.fillStyle = timeRemaining < 10 ? CONFIG.colors.accent : CONFIG.colors.text;
-    ctx.font = 'bold 20px monospace';
+    ctx.fillStyle = timeRemaining < 10 ? '#ef4444' : CONFIG.colors.text;
+    ctx.font = 'bold 14px monospace';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillText(timeStr, canvasWidth / 2, 10);
+    ctx.fillText(timeStr, canvasWidth / 2, barY + barH + 4);
   }
 
   if (dimmed) {
     ctx.globalAlpha = 1;
   }
+}
+
+// --- Pause & Hints ---
+
+function drawPauseOverlay(ctx) {
+  const cx = canvasWidth / 2;
+  const cy = canvasHeight / 2;
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+  ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 52px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('PAUSED', cx, cy - 20);
+
+  ctx.font = '22px monospace';
+  ctx.fillText('Press P to resume', cx, cy + 30);
+  ctx.restore();
+}
+
+function drawControlHints(ctx) {
+  if (hintTimer <= 0 || currentState !== GameState.PLAYING || paused) return;
+
+  let alpha = 1;
+  if (hintTimer < 1000) {
+    alpha = hintTimer / 1000;
+  }
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = CONFIG.colors.text;
+  ctx.font = '14px monospace';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText('Click to swap | P: Pause', 12, canvasHeight - 12);
+  ctx.restore();
 }
 
 // --- Game Over ---

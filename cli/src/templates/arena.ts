@@ -1,4 +1,5 @@
 import type { GameDesignSnapshot, ArenaMechanics } from '../snapshot.js';
+import { escapeJsString } from './escape.js';
 
 export function getArenaConfig(snapshot: GameDesignSnapshot): string {
   const m = snapshot.mechanics as ArenaMechanics;
@@ -24,14 +25,27 @@ const config = {
   },
   bullets: {
     speed: ${m.bulletSpeed},
-    size: 5,
-    cooldown: 150,
+    size: ${m.bulletSize},
+    cooldown: ${m.bulletCooldown},
   },
   enemies: {
     baseSpeed: ${m.enemySpeed},
     size: 25,
     spawnRate: ${m.spawnRate},
     waveDifficultyCurve: ${m.waveDifficultyCurve},
+    types: [
+      { name: 'basic', hp: 1, speedMult: 1.0, sizeMult: 1.0, score: 50, colorShift: 0 },
+      { name: 'tank',  hp: 3, speedMult: 0.5, sizeMult: 1.6, score: 150, colorShift: -30 },
+      { name: 'fast',  hp: 1, speedMult: 2.0, sizeMult: 0.7, score: 100, colorShift: 30 },
+    ],
+  },
+  powerups: {
+    dropChance: 0.2,
+    size: 14,
+    lifetime: 8,
+    effectDuration: 10,
+    shieldHits: 3,
+    weights: [0.5, 0.3, 0.2],
   },
   arena: {
     width: ${m.arenaWidth},
@@ -43,8 +57,7 @@ const config = {
     shadowBlur: ${snapshot.vibe === 'minimal' ? 0 : 8},
   },
   game: {
-    title: '${snapshot.title.replace(/'/g, "\\'")}',
-    sessionLength: '${snapshot.sessionLength}',
+    title: '${escapeJsString(snapshot.title)}',
   },
 };
 

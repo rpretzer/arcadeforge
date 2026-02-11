@@ -63,24 +63,46 @@ export function update(dt) {
 
 export function draw() {
   const sprite = getAsset('bullet');
+  const style = config.visual.style || 'geometric';
+  const sz = config.bullets.size * 2;
+
   ctx.save();
   ctx.fillStyle = config.colors.bullet;
-  ctx.shadowColor = config.colors.bullet;
-  ctx.shadowBlur = config.visual.shadowBlur;
-
-  const sz = config.bullets.size * 2;
 
   for (const b of bullets) {
     if (sprite) {
       ctx.drawImage(sprite, b.x - sz / 2, b.y - sz / 2, sz, sz);
+      continue;
+    }
+
+    if (style === 'pixel') {
+      // Pixel style: sharp square, no shadow
+      const bsz = config.bullets.size;
+      ctx.fillRect(Math.round(b.x - bsz), Math.round(b.y - bsz), bsz * 2, bsz * 2);
+    } else if (style === 'hand-drawn') {
+      // Hand-drawn style: slight wobble, stroke outline
+      ctx.strokeStyle = config.colors.bullet;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(b.x + rnd(1), b.y + rnd(1), config.bullets.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
     } else {
+      // Geometric (default): circle with shadow glow
+      ctx.shadowColor = config.colors.bullet;
+      ctx.shadowBlur = config.visual.shadowBlur;
       ctx.beginPath();
       ctx.arc(b.x, b.y, config.bullets.size, 0, Math.PI * 2);
       ctx.fill();
+      ctx.shadowBlur = 0;
     }
   }
 
   ctx.restore();
+}
+
+function rnd(amount) {
+  return (Math.random() - 0.5) * 2 * amount;
 }
 
 export function getBullets() {

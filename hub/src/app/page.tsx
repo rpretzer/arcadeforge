@@ -1,29 +1,50 @@
-import { createClient } from "@/lib/supabase";
+import { createServerClient } from "@/lib/supabase-server";
 import GameCard from "@/components/GameCard";
+import GamesSearch from "@/components/GamesSearch";
 import type { Game } from "@/lib/types";
 import Link from "next/link";
 
 const genres = ["all", "runner", "arena", "puzzle"] as const;
 
+const GAMES_PER_PAGE = 12;
+
 interface HomePageProps {
-  searchParams: { genre?: string };
+  searchParams: Promise<{ genre?: string; page?: string }>;
 }
 
 export default async function HomePage({ searchParams }: HomePageProps) {
-  const selectedGenre = searchParams.genre || "all";
+  const params = await searchParams;
+  const selectedGenre = params.genre || "all";
+  const currentPage = Math.max(1, parseInt(params.page || "1", 10) || 1);
 
   let games: Game[] = [];
+  let totalCount = 0;
   let ratingsMap: Record<string, number> = {};
 
   try {
-    const supabase = createClient();
+    const supabase = await createServerClient();
 
-    // Fetch approved games
+    // Count total for pagination
+    let countQuery = supabase
+      .from("games")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "approved");
+
+    if (selectedGenre !== "all") {
+      countQuery = countQuery.eq("genre", selectedGenre);
+    }
+
+    const { count } = await countQuery;
+    totalCount = count || 0;
+
+    // Fetch approved games with pagination
+    const offset = (currentPage - 1) * GAMES_PER_PAGE;
     let query = supabase
       .from("games")
       .select("*")
       .eq("status", "approved")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .range(offset, offset + GAMES_PER_PAGE - 1);
 
     if (selectedGenre !== "all") {
       query = query.eq("genre", selectedGenre);
@@ -55,6 +76,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   } catch (err) {
     console.error("Failed to fetch games:", err);
   }
+
+  const totalPages = Math.ceil(totalCount / GAMES_PER_PAGE);
+  const genreParam = selectedGenre !== "all" ? `&genre=${selectedGenre}` : "";
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
@@ -97,21 +121,48 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </div>
       </section>
 
-      {/* Games grid */}
-      {games.length > 0 ? (
-        <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {games.map((game) => (
-            <GameCard
-              key={game.id}
-              game={game}
-              averageRating={ratingsMap[game.id]}
-            />
+      {/* Client-side search filter */}
+      <GamesSearch games={games} ratingsMap={ratingsMap} />
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <section className="mt-10 flex items-center justify-center gap-2">
+          {currentPage > 1 && (
+            <Link
+              href={`/?page=${currentPage - 1}${genreParam}`}
+              className="rounded-lg border border-white/15 px-4 py-2 text-sm text-gray-400 hover:border-neon/40 hover:text-neon transition-colors"
+            >
+              Previous
+            </Link>
+          )}
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            <Link
+              key={page}
+              href={`/?page=${page}${genreParam}`}
+              className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                page === currentPage
+                  ? "bg-neon text-black"
+                  : "border border-white/15 text-gray-400 hover:border-neon/40 hover:text-neon"
+              }`}
+            >
+              {page}
+            </Link>
           ))}
+          {currentPage < totalPages && (
+            <Link
+              href={`/?page=${currentPage + 1}${genreParam}`}
+              className="rounded-lg border border-white/15 px-4 py-2 text-sm text-gray-400 hover:border-neon/40 hover:text-neon transition-colors"
+            >
+              Next
+            </Link>
+          )}
         </section>
-      ) : (
+      )}
+
+      {/* Empty state (only if no games at all) */}
+      {games.length === 0 && (
         <section className="py-20 text-center">
           <div className="mx-auto max-w-md space-y-4">
-            <div className="text-5xl">🎮</div>
             <h2 className="text-xl font-semibold text-gray-300">
               No games found
             </h2>

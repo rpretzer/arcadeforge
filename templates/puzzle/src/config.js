@@ -21,7 +21,6 @@ const CONFIG = {
 
   game: {
     title: 'Puzzle',
-    sessionLength: 'medium',
     timeLimit: 0,           // seconds; 0 = unlimited
     difficultyProgression: 1.1,
   },
@@ -30,6 +29,12 @@ const CONFIG = {
     matchBase: 100,
     comboMultiplier: 1.5,
     levelUpThreshold: 1000,
+    timeBonusThreshold: 500,   // every N points adds 10 seconds
+  },
+
+  special: {
+    spawnChance: 0.05,         // 5% chance on new piece generation
+    bombRadius: 1,             // clears (2r+1)x(2r+1) area — 1 = 3x3
   },
 
   visual: {

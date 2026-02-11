@@ -95,6 +95,13 @@ export async function serveGame(dir: string = '.'): Promise<void> {
     process.exit(1);
   }
 
+  const indexPath = path.join(targetDir, 'index.html');
+  if (!existsSync(indexPath)) {
+    console.warn(chalk.yellow(`\n⚠️  Warning: No index.html found in ${targetDir}`));
+    console.warn(chalk.dim('   The server will start, but you might just see a file listing.'));
+    console.warn(chalk.dim('   Make sure you are in your game\'s root directory.\n'));
+  }
+
   const server = http.createServer(async (req, res) => {
     // API: Handle Feedback
     if (req.url === '/__arcadeforge/feedback' && req.method === 'POST') {

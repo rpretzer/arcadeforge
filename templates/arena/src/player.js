@@ -68,6 +68,7 @@ export function draw() {
   const sz = config.player.size;
   const blink = invulnTimer > 0 && Math.floor(invulnTimer * 10) % 2 === 0;
   const sprite = getAsset('player');
+  const style = config.visual.style || 'geometric';
 
   ctx.save();
   ctx.translate(x, y);
@@ -78,22 +79,46 @@ export function draw() {
     ctx.drawImage(sprite, -sz / 2, -sz / 2, sz, sz);
     ctx.globalAlpha = 1;
   } else {
-    // Shadow glow
-    ctx.shadowColor = config.colors.player;
-    ctx.shadowBlur = config.visual.shadowBlur;
+    const color = blink ? 'rgba(255,255,255,0.6)' : config.colors.player;
 
-    ctx.fillStyle = blink ? 'rgba(255,255,255,0.6)' : config.colors.player;
-    ctx.beginPath();
-    // Triangle pointing right (toward cursor after rotation)
-    ctx.moveTo(sz * 0.6, 0);
-    ctx.lineTo(-sz * 0.4, -sz * 0.4);
-    ctx.lineTo(-sz * 0.4, sz * 0.4);
-    ctx.closePath();
-    ctx.fill();
+    if (style === 'pixel') {
+      // Pixel style: sharp-edged, no shadow, integer-snapped
+      ctx.fillStyle = color;
+      ctx.fillRect(Math.round(-sz / 2), Math.round(-sz / 2), sz, sz);
+    } else if (style === 'hand-drawn') {
+      // Hand-drawn style: wobble, thick stroke, opacity variation
+      ctx.globalAlpha = blink ? 0.5 : (0.85 + Math.random() * 0.15);
+      ctx.fillStyle = color;
+      ctx.strokeStyle = config.colors.player;
+      ctx.lineWidth = 3;
+      const wb = 2;
+      ctx.beginPath();
+      ctx.moveTo(sz * 0.6 + rnd(wb), rnd(wb));
+      ctx.lineTo(-sz * 0.4 + rnd(wb), -sz * 0.4 + rnd(wb));
+      ctx.lineTo(-sz * 0.4 + rnd(wb), sz * 0.4 + rnd(wb));
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    } else {
+      // Geometric (default): triangle with shadow glow
+      ctx.shadowColor = config.colors.player;
+      ctx.shadowBlur = config.visual.shadowBlur;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(sz * 0.6, 0);
+      ctx.lineTo(-sz * 0.4, -sz * 0.4);
+      ctx.lineTo(-sz * 0.4, sz * 0.4);
+      ctx.closePath();
+      ctx.fill();
+    }
   }
 
   ctx.shadowBlur = 0;
   ctx.restore();
+}
+
+function rnd(amount) {
+  return (Math.random() - 0.5) * 2 * amount;
 }
 
 export function takeDamage(amount = 1) {
@@ -109,6 +134,10 @@ export function getPosition() {
 
 export function getHealth() {
   return health;
+}
+
+export function heal(amount = 1) {
+  health = Math.min(config.player.maxHealth, health + amount);
 }
 
 export function getHitbox() {

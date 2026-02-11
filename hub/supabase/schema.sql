@@ -33,3 +33,8 @@ create policy "Anyone can submit games" on games for insert with check (status =
 create policy "Anyone can read ratings" on ratings for select using (true);
 -- Anyone can add ratings
 create policy "Anyone can add ratings" on ratings for insert with check (true);
+
+-- Only service role (admin) can update game status
+create policy "Service role can update games" on games for update using (
+  (current_setting('request.jwt.claims', true)::json->>'role') = 'service_role'
+);

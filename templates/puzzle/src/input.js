@@ -44,10 +44,9 @@ function onPointer(e) {
 
 function handlePointer(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
-  const px = (clientX - rect.left) * scaleX;
-  const py = (clientY - rect.top) * scaleY;
+  // Use CSS-pixel coordinates — the canvas context transform handles DPR scaling
+  const px = clientX - rect.left;
+  const py = clientY - rect.top;
 
   const { cellSize, padding, width, height } = CONFIG.grid;
   const totalCell = cellSize + padding;

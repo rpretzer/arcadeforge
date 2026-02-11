@@ -44,24 +44,49 @@ export function update(delta, canvas) {
 export function draw(ctx) {
   const w  = cfg.player.width;
   const h  = cfg.player.height;
-  const r  = cfg.visual.cornerRadius;
   const sprite = getAsset('player');
+  const style = cfg.visual.style || 'geometric';
 
   if (sprite) {
     ctx.drawImage(sprite, x, y, w, h);
     return;
   }
 
-  // Shadow
   ctx.save();
-  ctx.shadowColor   = cfg.colors.player;
-  ctx.shadowBlur    = cfg.visual.shadowBlur;
-  ctx.shadowOffsetX = 0;
-  ctx.shadowOffsetY = 4;
 
-  ctx.fillStyle = cfg.colors.player;
-  roundRect(ctx, x, y, w, h, r);
-  ctx.fill();
+  if (style === 'pixel') {
+    // Pixel style: sharp edges, no shadows, integer-snapped positions
+    const px = Math.round(x);
+    const py = Math.round(y);
+    ctx.fillStyle = cfg.colors.player;
+    ctx.fillRect(px, py, w, h);
+  } else if (style === 'hand-drawn') {
+    // Hand-drawn style: wobble corners, thick stroke, slight opacity variation
+    ctx.globalAlpha = 0.85 + Math.random() * 0.15;
+    ctx.strokeStyle = cfg.colors.player;
+    ctx.lineWidth = 3;
+    ctx.fillStyle = cfg.colors.player;
+    const wb = 2; // wobble amount
+    ctx.beginPath();
+    ctx.moveTo(x + rnd(wb), y + rnd(wb));
+    ctx.lineTo(x + w + rnd(wb), y + rnd(wb));
+    ctx.lineTo(x + w + rnd(wb), y + h + rnd(wb));
+    ctx.lineTo(x + rnd(wb), y + h + rnd(wb));
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  } else {
+    // Geometric (default): rounded rect with shadow
+    const r = cfg.visual.cornerRadius;
+    ctx.shadowColor   = cfg.colors.player;
+    ctx.shadowBlur    = cfg.visual.shadowBlur;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 4;
+    ctx.fillStyle = cfg.colors.player;
+    roundRect(ctx, x, y, w, h, r);
+    ctx.fill();
+  }
+
   ctx.restore();
 
   // Eye detail (gives personality)
@@ -109,6 +134,11 @@ function resetPosition(canvas) {
   y        = groundY - cfg.player.height;
   vy       = 0;
   onGround = true;
+}
+
+/** Return a random offset in the range [-amount, +amount]. */
+function rnd(amount) {
+  return (Math.random() - 0.5) * 2 * amount;
 }
 
 /**

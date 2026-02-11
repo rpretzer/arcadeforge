@@ -7,7 +7,21 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "ArcadeForge Hub",
-  description: "Discover and play browser games built with ArcadeForge",
+  description:
+    "Discover and play browser games built by the community with ArcadeForge, the AI-powered game creation toolkit.",
+  icons: {
+    icon: "/icon.svg",
+  },
+  openGraph: {
+    title: "ArcadeForge Hub",
+    description:
+      "Discover and play browser games built by the community with ArcadeForge.",
+    siteName: "ArcadeForge Hub",
+    type: "website",
+  },
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
+  ),
 };
 
 export default function RootLayout({

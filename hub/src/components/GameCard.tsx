@@ -22,15 +22,26 @@ export default function GameCard({ game, averageRating }: GameCardProps) {
   return (
     <Link href={`/games/${game.id}`} className="group">
       <div className="card overflow-hidden">
-        {/* Thumbnail placeholder */}
-        <div
-          className={`relative h-40 ${genreColors[game.genre]} flex items-center justify-center transition-transform group-hover:scale-[1.02]`}
-        >
-          <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 to-transparent" />
-          <span className="relative text-4xl font-black text-white/30 uppercase tracking-widest">
-            {game.genre}
-          </span>
-        </div>
+        {/* Thumbnail */}
+        {game.thumbnail_url ? (
+          <div className="relative h-40 overflow-hidden transition-transform group-hover:scale-[1.02]">
+            <img
+              src={game.thumbnail_url}
+              alt={game.title}
+              className="h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 to-transparent" />
+          </div>
+        ) : (
+          <div
+            className={`relative h-40 ${genreColors[game.genre]} flex items-center justify-center transition-transform group-hover:scale-[1.02]`}
+          >
+            <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 to-transparent" />
+            <span className="relative text-4xl font-black text-white/30 uppercase tracking-widest">
+              {game.genre}
+            </span>
+          </div>
+        )}
 
         {/* Card body */}
         <div className="p-4 space-y-3">

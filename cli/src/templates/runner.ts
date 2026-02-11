@@ -1,4 +1,5 @@
 import type { GameDesignSnapshot, RunnerMechanics } from '../snapshot.js';
+import { escapeJsString } from './escape.js';
 
 export function getRunnerConfig(snapshot: GameDesignSnapshot): string {
   const m = snapshot.mechanics as RunnerMechanics;
@@ -28,6 +29,26 @@ const config = {
     maxHeight: 60,
     width: 25,
     gap: 200,
+    types: [
+      { id: 'block', width: 25, heightRange: [30, 60], color: '${c.accent}' },
+      { id: 'spike', width: 30, heightRange: [35, 50], color: '#ff4444' },
+      { id: 'moving', width: 25, heightRange: [30, 55], color: '${c.secondary}' },
+    ],
+  },
+  collectibles: {
+    spawnChance: 0.03,
+    types: [
+      { id: 'coin', points: 10, color: '#ffd700', size: 18 },
+      { id: 'star', points: 50, color: '#00ffff', size: 20 },
+    ],
+  },
+  powerups: {
+    spawnChance: 0.005,
+    duration: {
+      shield: Infinity,
+      magnet: 15000,
+      slowmo: 10000,
+    },
   },
   player: {
     width: 40,
@@ -40,8 +61,7 @@ const config = {
     shadowBlur: ${snapshot.vibe === 'minimal' ? 0 : 10},
   },
   game: {
-    title: '${snapshot.title.replace(/'/g, "\\'")}',
-    sessionLength: '${snapshot.sessionLength}',
+    title: '${escapeJsString(snapshot.title)}',
   },
 };
 
