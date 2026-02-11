@@ -22,18 +22,46 @@ const g = chalk.greenBright;
 const c = chalk.cyanBright;
 const m = chalk.magentaBright;
 
-const BANNER = `
-${g('    ╔══════════════════════════════════════════╗')}
-${g('    ║')}${c('  ░█▀█░█▀▄░█▀▀░█▀█░█▀▄░█▀▀')}              ${g('║')}
-${g('    ║')}${c('  ░█▀█░█▀▄░█░░░█▀█░█░█░█▀▀')}              ${g('║')}
-${g('    ║')}${c('  ░▀░▀░▀░▀░▀▀▀░▀░▀░▀▀░░▀▀▀')}              ${g('║')}
-${g('    ║')}${m('  ░█▀▀░█▀█░█▀▄░█▀▀░█▀▀')}                 ${g('║')}
-${g('    ║')}${m('  ░█▀▀░█░█░█▀▄░█░█░█▀▀')}                 ${g('║')}
-${g('    ║')}${m('  ░▀░░░▀▀▀░▀░▀░▀▀▀░▀▀▀')}                 ${g('║')}
-${g('    ║')}                                          ${g('║')}
-${g('    ║')}  ${chalk.bold.yellowBright('AI-Powered Game Creation')}  ${chalk.dim(`v${version}`)}     ${g('║')}
-${g('    ╚══════════════════════════════════════════╝')}
-`;
+function makeBanner(): string {
+  const W = 44;
+  const hr = g('  +' + '-'.repeat(W) + '+');
+  const pad = (s: string, w = W) => s + ' '.repeat(Math.max(0, w - s.length));
+  const ln = (s: string, color: (t: string) => string) =>
+    g('  |') + color(pad(s)) + g('|');
+  const blank = g('  |') + ' '.repeat(W) + g('|');
+
+  // Simple block letters — no backslashes, no escaping issues
+  const arcadeLines = [
+    '    #####  ####   ###  #####  ####  #####',
+    '   ##  ## ##  ## ##   ##  ## ##  ## ##   ',
+    '   ###### #####  ##   ###### ##  ## #### ',
+    '   ##  ## ##  ## ##   ##  ## ##  ## ##   ',
+    '   ##  ## ##  ##  ### ##  ## ####  #####',
+  ];
+  const forgeLines = [
+    '   #####  ####  ####   ###  #####',
+    '   ##    ##  ## ##  ## ##   ##   ',
+    '   ####  ##  ## #####  ## # #### ',
+    '   ##    ##  ## ##  ## ##  ##    ',
+    '   ##     ####  ##  ##  ### #####',
+  ];
+
+  const ver = `v${version}`;
+  const tag = '  AI-Powered Game Creation';
+  const gap = ' '.repeat(Math.max(2, W - tag.length - ver.length - 1));
+
+  return '\n' + [
+    hr,
+    blank,
+    ...arcadeLines.map(l => ln(l, c)),
+    ...forgeLines.map(l => ln(l, m)),
+    blank,
+    g('  |') + chalk.bold.yellowBright(tag) + gap + chalk.dim(ver) + g('|'),
+    hr,
+  ].join('\n') + '\n';
+}
+
+const BANNER = makeBanner();
 
 function pickRandom<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)] as T;
