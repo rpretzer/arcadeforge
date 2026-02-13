@@ -75,10 +75,16 @@ export function draw() {
       continue;
     }
 
-    if (style === 'pixel') {
-      // Pixel style: sharp square, no shadow
+    if (style === 'pixel' || config.visual.retroEra) {
       const bsz = config.bullets.size;
-      ctx.fillRect(Math.round(b.x - bsz), Math.round(b.y - bsz), bsz * 2, bsz * 2);
+      const px = Math.round(b.x - bsz);
+      const py = Math.round(b.y - bsz);
+      if (config.visual.retroEra) {
+        ctx.strokeStyle = config.visual.outlineColor || '#0a0a14';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(px - 1, py - 1, bsz * 2 + 2, bsz * 2 + 2);
+      }
+      ctx.fillRect(px, py, bsz * 2, bsz * 2);
     } else if (style === 'hand-drawn') {
       // Hand-drawn style: slight wobble, stroke outline
       ctx.strokeStyle = config.colors.bullet;

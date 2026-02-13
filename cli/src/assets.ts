@@ -48,8 +48,8 @@ async function generateStabilityImage(prompt: string, color: string): Promise<Bu
     const responseJSON = (await response.json()) as any;
     const imageBase64 = responseJSON.artifacts[0].base64;
     return Buffer.from(imageBase64, 'base64');
-  } catch (err) {
-    console.error(chalk.yellow('   ⚠️ Stability AI failed:'), err);
+  } catch (err: unknown) {
+    console.error(chalk.yellow('   ⚠️ Stability AI failed:'), err instanceof Error ? err.message : err);
     return null;
   }
 }

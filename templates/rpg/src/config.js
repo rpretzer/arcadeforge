@@ -32,6 +32,10 @@ const config = {
     invulnDuration: 1.0,
     knockback: 5,
     damageNumberDuration: 0.8,
+    dodgeEnabled: true,
+    dodgeCooldown: 800,
+    dodgeDuration: 150,
+    telegraphDuration: 0.4,
   },
 
   map: {
@@ -48,6 +52,11 @@ const config = {
 
   visual: {
     style: 'geometric',
+  },
+
+  juice: {
+    screenShake: true,
+    damageNumbers: true,
   },
 
   game: {

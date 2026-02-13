@@ -69,7 +69,7 @@ function pickRandom<T>(arr: readonly T[]): T {
 
 function generateQuickDefaults(): QuestionnaireAnswers {
   const genres: Genre[] = ['runner', 'arena', 'puzzle', 'rpg', 'tower-defense', 'racing'];
-  const vibes: Vibe[] = ['retro', 'cozy', 'dark', 'neon', 'minimal'];
+  const vibes: Vibe[] = ['retro', 'cozy', 'dark', 'neon', 'minimal', 'nes', 'snes'];
   const genre = pickRandom(genres);
   const vibe = pickRandom(vibes);
 

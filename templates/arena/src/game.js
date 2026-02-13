@@ -25,7 +25,8 @@ let mouseX = 0, mouseY = 0;
 
 // Visual effects
 let muzzleFlash = { active: false, x: 0, y: 0, timer: 0 };
-let hitMarkers = []; // { x, y, timer }
+let hitMarkers = [];
+let shakeTimer = 0;
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -75,12 +76,14 @@ export function update(dt, keys, mouse) {
       }
     }
 
-    // Bullet <-> enemy collisions (returns array of kill info)
     const kills = checkBulletCollisions();
     for (const kill of kills) {
-      addScore(kill.score);
+      addScore(kill.score, kill.x, kill.y);
       spawnDrop(kill.x, kill.y);
       hitMarkers.push({ x: kill.x, y: kill.y, timer: 0.2 });
+      if (config.juice?.screenShake !== false && config.juice?.shakeOnKill) {
+        shakeTimer = Math.max(shakeTimer, 0.15);
+      }
     }
 
     // Wave change bonus
@@ -106,6 +109,7 @@ export function update(dt, keys, mouse) {
       hitMarkers[i].timer -= dt;
       if (hitMarkers[i].timer <= 0) hitMarkers.splice(i, 1);
     }
+    if (shakeTimer > 0) shakeTimer -= dt;
 
     // Check death
     if (getHealth() <= 0) {
@@ -116,11 +120,18 @@ export function update(dt, keys, mouse) {
 }
 
 export function draw() {
-  // Clear
+  const shakeIntensity = (config.juice?.shakeOnKill ?? 0.3) * 8;
+  let shakeX = 0, shakeY = 0;
+  if (shakeTimer > 0) {
+    shakeX = (Math.random() - 0.5) * 2 * shakeIntensity;
+    shakeY = (Math.random() - 0.5) * 2 * shakeIntensity;
+  }
+
+  ctx.save();
+  if (shakeX || shakeY) ctx.translate(shakeX, shakeY);
+
   ctx.fillStyle = config.colors.background;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // Draw subtle grid
   drawGrid();
 
   if (state === 'menu') {
@@ -139,7 +150,6 @@ export function draw() {
       drawPauseOverlay();
     }
   } else if (state === 'gameover') {
-    // Draw the last frame frozen underneath
     drawProjectiles();
     drawPowerups();
     drawEnemies();
@@ -147,6 +157,12 @@ export function draw() {
     drawScoring();
     drawGameOver();
   }
+
+  if (config.visual?.scanlines && state !== 'menu') {
+    drawScanlines();
+  }
+
+  ctx.restore();
 }
 
 export function handleClick(mouse) {
@@ -211,6 +227,7 @@ export function handleKeyDown(key) {
 // ---------------------------------------------------------------------------
 
 function startGame() {
+  shakeTimer = 0;
   resetPlayer();
   resetEnemies();
   resetProjectiles();
@@ -323,6 +340,17 @@ function drawControlHints() {
   ctx.textAlign = 'left';
   ctx.textBaseline = 'bottom';
   ctx.fillText('WASD: Move | CLICK: Shoot | P: Pause', 12, canvas.height - 12);
+  ctx.restore();
+}
+
+function drawScanlines() {
+  ctx.save();
+  ctx.globalAlpha = 0.06;
+  ctx.fillStyle = '#000';
+  for (let y = 0; y < canvas.height; y += 4) {
+    ctx.fillRect(0, y, canvas.width, 2);
+  }
+  ctx.globalAlpha = 1;
   ctx.restore();
 }
 

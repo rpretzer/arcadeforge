@@ -54,7 +54,8 @@ export function update(dt, playerBounds, gameSpeed) {
       width: item.size,
       height: item.size,
     })) {
-      points.push(item.points);
+      const drawY = item.y - Math.sin(item.bobPhase) * 4;
+      points.push({ points: item.points, x: item.x + item.size / 2, y: drawY + item.size / 2 });
       collected++;
       items.splice(i, 1);
     }
@@ -70,21 +71,30 @@ export function draw(ctx) {
     const drawY = item.y - Math.sin(item.bobPhase) * 4;
     ctx.save();
 
-    if (item.type === 'coin') {
-      // Gold circle
-      ctx.fillStyle = item.color;
-      ctx.beginPath();
-      ctx.arc(item.x + item.size / 2, drawY + item.size / 2, item.size / 2, 0, Math.PI * 2);
-      ctx.fill();
+    const retro = cfg.visual && cfg.visual.retroEra;
+    const outline = (cfg.visual && cfg.visual.outlineColor) || '#0a0a14';
 
-      // Inner highlight
-      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    if (item.type === 'coin') {
+      const cx = Math.round(item.x + item.size / 2);
+      const cy = Math.round(drawY + item.size / 2);
+      const r = item.size / 2;
       ctx.beginPath();
-      ctx.arc(item.x + item.size / 2 - 2, drawY + item.size / 2 - 2, item.size / 4, 0, Math.PI * 2);
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      if (retro) {
+        ctx.strokeStyle = outline;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      ctx.fillStyle = item.color;
       ctx.fill();
+      if (!retro) {
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.beginPath();
+        ctx.arc(cx - 2, cy - 2, item.size / 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
     } else {
-      // Star shape
-      drawStar(ctx, item.x + item.size / 2, drawY + item.size / 2, 5, item.size / 2, item.size / 4, item.color);
+      drawStar(ctx, item.x + item.size / 2, drawY + item.size / 2, 5, item.size / 2, item.size / 4, item.color, retro, outline);
     }
 
     ctx.restore();
@@ -146,8 +156,7 @@ function aabb(a, b) {
   );
 }
 
-function drawStar(ctx, cx, cy, spikes, outerR, innerR, color) {
-  ctx.fillStyle = color;
+function drawStar(ctx, cx, cy, spikes, outerR, innerR, color, retro, outline) {
   ctx.beginPath();
   let rot = -Math.PI / 2;
   const step = Math.PI / spikes;
@@ -162,5 +171,11 @@ function drawStar(ctx, cx, cy, spikes, outerR, innerR, color) {
   }
 
   ctx.closePath();
+  if (retro && outline) {
+    ctx.strokeStyle = outline;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  ctx.fillStyle = color;
   ctx.fill();
 }

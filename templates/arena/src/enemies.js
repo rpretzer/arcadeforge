@@ -58,27 +58,28 @@ function pickEnemyType(w) {
   return types[0];
 }
 
-function spawnOne() {
+function spawnOne(isBoss = false) {
   const side = Math.floor(Math.random() * 4);
   let ex, ey;
   const margin = config.enemies.size;
 
   switch (side) {
-    case 0: ex = Math.random() * canvas.width;  ey = -margin;              break; // top
-    case 1: ex = Math.random() * canvas.width;  ey = canvas.height + margin; break; // bottom
-    case 2: ex = -margin;                       ey = Math.random() * canvas.height; break; // left
-    case 3: ex = canvas.width + margin;          ey = Math.random() * canvas.height; break; // right
+    case 0: ex = Math.random() * canvas.width;  ey = -margin;              break;
+    case 1: ex = Math.random() * canvas.width;  ey = canvas.height + margin; break;
+    case 2: ex = -margin;                       ey = Math.random() * canvas.height; break;
+    case 3: ex = canvas.width + margin;          ey = Math.random() * canvas.height; break;
   }
 
   const baseSpeed = enemySpeedForWave(wave) * (0.8 + Math.random() * 0.4);
-  const type = pickEnemyType(wave);
+  const type = isBoss && config.enemies.boss ? config.enemies.boss : pickEnemyType(wave);
   const speedMult = type?.speedMult ?? 1;
   const sizeMult  = type?.sizeMult ?? 1;
   const hp         = type?.hp ?? 1;
   const score      = type?.score ?? 50;
   const typeName   = type?.name ?? 'basic';
-  const isSquare   = Math.random() < 0.4;
+  const isSquare   = isBoss ? true : Math.random() < 0.4;
 
+  const behavior = type?.behavior ?? 'chase';
   enemies.push({
     x: ex, y: ey,
     speed: baseSpeed * speedMult,
@@ -89,6 +90,8 @@ function spawnOne() {
     typeName,
     isSquare,
     flash: 0,
+    behavior,
+    phase: Math.random() * Math.PI * 2,
   });
 }
 
@@ -141,27 +144,65 @@ export function update(dt) {
   }
 
   // -- Spawn enemies ----------------------------------------------------------
+  const bossEvery = config.waves?.bossEvery ?? 5;
+  const isBossWave = wave > 0 && wave % bossEvery === 0;
+
   if (waveActive && enemiesSpawnedThisWave < enemiesPerWave) {
-    const spawnChance = config.enemies.spawnRate * 60 * dt;
-    if (Math.random() < spawnChance) {
-      spawnOne();
-      enemiesSpawnedThisWave++;
+    if (isBossWave && enemiesSpawnedThisWave === 0) {
+      spawnOne(true);
+      enemiesSpawnedThisWave = enemiesPerWave;
+    } else if (!isBossWave) {
+      const spawnChance = config.enemies.spawnRate * 60 * dt;
+      if (Math.random() < spawnChance) {
+        spawnOne(false);
+        enemiesSpawnedThisWave++;
+      }
     }
   }
 
-  // -- Move enemies toward player ---------------------------------------------
+  // -- Move enemies (behavior-based) ------------------------------------------
   const playerPos = getPosition();
   const playerHitbox = getHitbox();
 
   for (let i = enemies.length - 1; i >= 0; i--) {
     const e = enemies[i];
+    e.phase = (e.phase || 0) + dt * 3;
+
     const dx = playerPos.x - e.x;
     const dy = playerPos.y - e.y;
     const dist = Math.hypot(dx, dy) || 1;
     const spd = e.speed * 60 * dt;
 
-    e.x += (dx / dist) * spd;
-    e.y += (dy / dist) * spd;
+    const behavior = e.behavior || 'chase';
+    let moveX = (dx / dist) * spd;
+    let moveY = (dy / dist) * spd;
+
+    if (behavior === 'zigzag') {
+      const perpX = -dy / dist;
+      const perpY = dx / dist;
+      const zig = Math.sin(e.phase) * spd * 0.8;
+      moveX += perpX * zig;
+      moveY += perpY * zig;
+    } else if (behavior === 'orbit') {
+      const perpX = -dy / dist;
+      const perpY = dx / dist;
+      const orbitDir = Math.sin(e.phase) > 0 ? 1 : -1;
+      moveX = (dx / dist) * spd * 0.3 + perpX * spd * orbitDir * 1.2;
+      moveY = (dy / dist) * spd * 0.3 + perpY * orbitDir * spd * 1.2;
+    } else if (behavior === 'retreat') {
+      const approach = Math.sin(e.phase) > 0.3;
+      const mult = approach ? 1 : -0.5;
+      moveX *= mult;
+      moveY *= mult;
+    } else if (behavior === 'rush') {
+      const burst = Math.sin(e.phase) > 0.7;
+      const mult = burst ? 2.5 : 0.4;
+      moveX *= mult;
+      moveY *= mult;
+    }
+
+    e.x += moveX;
+    e.y += moveY;
 
     // Flash timer countdown
     if (e.flash > 0) e.flash -= dt;
@@ -209,10 +250,15 @@ export function draw() {
 
     const color = e.flash > 0 ? '#ffffff' : shiftColor(config.colors.enemy, e);
 
-    if (style === 'pixel') {
-      ctx.fillStyle = color;
+    if (style === 'pixel' || config.visual.retroEra) {
       const px = Math.round(e.x - sz / 2);
       const py = Math.round(e.y - sz / 2);
+      if (config.visual.retroEra) {
+        ctx.strokeStyle = config.visual.outlineColor || '#0a0a14';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(px - 1, py - 1, sz + 2, sz + 2);
+      }
+      ctx.fillStyle = color;
       ctx.fillRect(px, py, sz, sz);
     } else if (style === 'hand-drawn') {
       ctx.globalAlpha = e.flash > 0 ? 0.5 : (0.85 + Math.random() * 0.15);
@@ -286,6 +332,8 @@ function drawWaveAnnouncement() {
   const cx = canvas.width / 2;
   const cy = canvas.height / 2;
   const alpha = Math.min(1, waveAnnouncement.timer);
+  const bossEvery = config.waves?.bossEvery ?? 5;
+  const isBoss = waveAnnouncement.wave > 0 && waveAnnouncement.wave % bossEvery === 0;
 
   ctx.save();
   ctx.globalAlpha = alpha;
@@ -301,7 +349,10 @@ function drawWaveAnnouncement() {
   ctx.shadowBlur = 0;
   ctx.font = '20px monospace';
   ctx.fillStyle = config.colors.text;
-  ctx.fillText(`${waveAnnouncement.enemyCount} enemies incoming`, cx, cy + 25);
+  ctx.fillText(
+    isBoss ? 'BOSS INCOMING!' : `${waveAnnouncement.enemyCount} enemies incoming`,
+    cx, cy + 25
+  );
 
   ctx.restore();
 }
@@ -310,9 +361,9 @@ function drawWaveAnnouncement() {
  * Shift enemy color based on type for visual differentiation.
  */
 function shiftColor(baseColor, enemy) {
-  const types = config.enemies.types;
-  if (!types) return baseColor;
-  const typeConfig = types.find(t => t.name === enemy.typeName);
+  const types = config.enemies.types || [];
+  const boss = config.enemies.boss;
+  const typeConfig = types.find(t => t.name === enemy.typeName) || (enemy.typeName === 'boss' ? boss : null);
   if (!typeConfig || typeConfig.colorShift === 0) return baseColor;
 
   const shift = typeConfig.colorShift;

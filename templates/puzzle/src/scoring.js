@@ -34,6 +34,7 @@ export function init() {
   highScore = parseInt(localStorage.getItem('puzzle_highscore') || '0', 10);
   particles = [];
   screenFlashAlpha = 0;
+  boardShakeTimer = 0;
   lastBonusMilestone = 0;
   timeBonusPopup = null;
 }
@@ -42,10 +43,20 @@ export function init() {
  * Called each time a set of matches is cleared in a single step.
  * @param {number} matchedCount  total number of pieces removed this step
  */
+let boardShakeTimer = 0;
+
 export function addMatch(matchedCount) {
   combo++;
-  const points = Math.round(matchedCount * CONFIG.scoring.matchBase * combo);
+  const juice = CONFIG.juice || {};
+  const match4Bonus = juice.match4Bonus ?? 1.5;
+  const match5Bonus = juice.match5Bonus ?? 2.5;
+  const sizeMult = matchedCount >= 5 ? match5Bonus : (matchedCount >= 4 ? match4Bonus : 1);
+  const points = Math.round(matchedCount * CONFIG.scoring.matchBase * combo * sizeMult);
   score += points;
+
+  if (juice.boardShakeOnCombo && combo >= juice.boardShakeOnCombo) {
+    boardShakeTimer = 200;
+  }
 
   displayCombo = combo;
   comboTimer = COMBO_DISPLAY_TIME;
@@ -133,10 +144,13 @@ export function update(dt) {
     p.vy += 120 * (dt / 1000); // gravity
   }
 
-  // Fade screen flash
   if (screenFlashAlpha > 0) {
     screenFlashAlpha -= dt / 200;
     if (screenFlashAlpha < 0) screenFlashAlpha = 0;
+  }
+  if (boardShakeTimer > 0) {
+    boardShakeTimer -= dt;
+    if (boardShakeTimer < 0) boardShakeTimer = 0;
   }
 
   // Time bonus popup
@@ -244,6 +258,7 @@ export function getScore() { return score; }
 export function getLevel() { return level; }
 export function getHighScore() { return highScore; }
 export function getCombo() { return combo; }
+export function getBoardShake() { return boardShakeTimer; }
 
 export function reset() {
   init();

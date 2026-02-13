@@ -163,8 +163,9 @@ async function submitToHub(snapshot: GameDesignSnapshot, gameUrl: string): Promi
       const err = await response.json();
       throw new Error(err.error || 'Submission failed');
     }
-  } catch (err: any) {
-    console.log(chalk.yellow(`   ⚠️ Could not auto-submit to Hub: ${err.message}`));
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    console.log(chalk.yellow(`   ⚠️ Could not auto-submit to Hub: ${msg}`));
     console.log(chalk.dim('   You can still submit manually at the website.'));
   }
 }
@@ -212,8 +213,9 @@ export async function runDeploy(): Promise<void> {
             deployedUrl = urlMatch[0];
             console.log(chalk.green(`   ✓ Live at: ${deployedUrl}`));
           }
-        } catch (err) {
+        } catch (err: unknown) {
           console.log(chalk.red('   ❌ Vercel deploy failed. Falling back to config generation.'));
+          if (err instanceof Error) console.log(chalk.dim(err.message));
         }
       }
     }

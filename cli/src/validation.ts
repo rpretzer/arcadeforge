@@ -4,7 +4,7 @@ import chalk from 'chalk';
 // --- Enum schemas matching snapshot.ts types ---
 
 const genreSchema = z.enum(['runner', 'arena', 'puzzle', 'story', 'rpg', 'tower-defense', 'racing']);
-const vibeSchema = z.enum(['retro', 'cozy', 'dark', 'neon', 'minimal']);
+const vibeSchema = z.enum(['retro', 'cozy', 'dark', 'neon', 'minimal', 'nes', 'snes']);
 const playerCountSchema = z.enum(['single', '2-local', 'leaderboard-async']);
 const sessionLengthSchema = z.enum(['short', 'medium']);
 const inputMethodSchema = z.enum(['keyboard', 'touch', 'gamepad']);
@@ -50,7 +50,7 @@ export const runnerConfigSchema = z.object({
   }),
   game: z.object({
     title: z.string(),
-    sessionLength: z.string(),
+    sessionLength: z.string().optional(),
   }),
 });
 
@@ -101,7 +101,7 @@ export const arenaConfigSchema = z.object({
   }),
   game: z.object({
     title: z.string(),
-    sessionLength: z.string(),
+    sessionLength: z.string().optional(),
   }),
 });
 
@@ -125,7 +125,7 @@ export const puzzleConfigSchema = z.object({
   }),
   game: z.object({
     title: z.string(),
-    sessionLength: z.string(),
+    sessionLength: z.string().optional(),
     timeLimit: z.number().nonnegative().optional(),
     difficultyProgression: z.number().positive().optional(),
   }),

@@ -26,7 +26,7 @@
   - `snapshot.ts`: Type definitions (`Genre`, `Vibe`, `VisualStyle`, etc.) and `buildSnapshot()`.
   - `validation.ts`: Zod schemas for per-genre config validation.
   - `generator.ts`: Template copier, config injector, README generator.
-  - `templates/`: Per-genre config generators (`runner.ts`, `arena.ts`, `puzzle.ts`, `story.ts`, `rpg.ts`, `tower-defense.ts`, `racing.ts`, `escape.ts`).
+  - `templates/`: Per-genre config generators (`runner.ts`, `arena.ts`, `puzzle.ts`, `story.ts`, `rpg.ts`, `tower-defense.ts`, `racing.ts`). Shared utility: `escape.ts` (string escaping for config injection).
   - `serve.ts`: Dev server with feedback widget injection.
   - `remix.ts`: AI-powered game iteration from playtest notes.
   - `playtest.ts`: Local playtest runner.

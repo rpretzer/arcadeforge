@@ -9,25 +9,42 @@ const SCHEMAS = {
   runner: {
     colors: { background: '', player: '', obstacle: '', ground: '', text: '', accent: '' },
     physics: { gravity: 0.5, jumpForce: -11, baseSpeed: 4, speedIncrement: 0.002 },
-    obstacles: { frequency: 0.02, minHeight: 30, maxHeight: 60, width: 25, gap: 200 },
+    obstacles: { frequency: 0.02, minHeight: 30, maxHeight: 60, width: 25, gap: 200, types: [
+      { id: 'block', width: 25, heightRange: [30, 60], color: '' },
+      { id: 'spike', width: 30, heightRange: [35, 50], color: '#ff4444' },
+      { id: 'moving', width: 25, heightRange: [30, 55], color: '' },
+    ] },
+    collectibles: { spawnChance: 0.03, types: [
+      { id: 'coin', points: 10, color: '#ffd700', size: 18 },
+      { id: 'star', points: 50, color: '#00ffff', size: 20 },
+    ] },
+    powerups: { spawnChance: 0.005, duration: { shield: 999999, magnet: 15000, slowmo: 10000 } },
     player: { width: 40, height: 40, groundOffset: 60 },
     visual: { style: 'geometric', cornerRadius: 8, shadowBlur: 10 },
     game: { title: '' }
   },
   arena: {
-    colors: { background: '', player: '', enemy: '', bullet: '', text: '', accent: '' },
-    game: { title: '' },
-    player: { speed: 5, fireRate: 150, bulletSpeed: 10, health: 3 },
-    enemies: { spawnRate: 60, speed: 2, size: 30, scoreValue: 100 },
-    waves: { difficultyMultiplier: 1.1, timeBetweenWaves: 3000 },
-    visual: { style: 'geometric', shadowBlur: 10 }
+    colors: { background: '', player: '', enemy: '', bullet: '', text: '', accent: '', healthBar: '' },
+    player: { speed: 5, size: 30, maxHealth: 5 },
+    bullets: { speed: 10, size: 5, cooldown: 150 },
+    enemies: { baseSpeed: 2.5, size: 25, spawnRate: 0.02, waveDifficultyCurve: 1.2, types: [
+      { name: 'basic', hp: 1, speedMult: 1.0, sizeMult: 1.0, score: 50, colorShift: 0 },
+      { name: 'tank', hp: 3, speedMult: 0.5, sizeMult: 1.6, score: 150, colorShift: -30 },
+      { name: 'fast', hp: 1, speedMult: 2.0, sizeMult: 0.7, score: 100, colorShift: 30 },
+    ] },
+    powerups: { dropChance: 0.2, size: 14, lifetime: 8, effectDuration: 10, shieldHits: 3, weights: [0.5, 0.3, 0.2] },
+    arena: { width: 800, height: 600 },
+    visual: { style: 'geometric', cornerRadius: 4, shadowBlur: 8 },
+    game: { title: '' }
   },
   puzzle: {
-    colors: { background: '', accent: '', text: '', pieces: ['', '', '', '', ''] },
-    game: { title: '', timeLimit: 60, targetScore: 1000 },
-    grid: { rows: 8, cols: 8, cellSize: 50, gap: 4 },
-    match: { minMatch: 3, baseScore: 100 },
-    visual: { style: 'geometric', cornerRadius: 8 }
+    colors: { background: '', accent: '', text: '', gridBg: '', pieces: ['', '', '', '', '', ''] },
+    grid: { width: 7, height: 7, cellSize: 60, padding: 4, matchSize: 3 },
+    game: { title: '', timeLimit: 120, difficultyProgression: 1.1 },
+    scoring: { matchBase: 100, comboMultiplier: 1.5, levelUpThreshold: 1000, timeBonusThreshold: 500 },
+    special: { spawnChance: 0.05, bombRadius: 1 },
+    visual: { style: 'geometric', cornerRadius: 8, shadowBlur: 6 },
+    animation: { swapDuration: 200, fallDuration: 300, matchFlashDuration: 400 }
   },
   rpg: {
     colors: { background: '', floor: '', wall: '', player: '', enemy: '', npc: '', item: '', text: '', accent: '', hud: '' },
@@ -149,6 +166,14 @@ export async function generateConfigWithAI(snapshot: GameDesignSnapshot): Promis
 
     const schema = SCHEMAS[snapshot.genre as keyof typeof SCHEMAS];
 
+    const arenaInstructions = snapshot.genre === 'arena' ? `
+ARENA-SPECIFIC INSTRUCTIONS:
+6. Use "bullets" (not player.fireRate): bullets.speed, bullets.size, bullets.cooldown (ms between shots).
+7. Use "enemies.baseSpeed" (not enemies.speed), "enemies.spawnRate" (probability per frame, e.g. 0.02), "enemies.waveDifficultyCurve".
+8. enemies.types must be an array of { name, hp, speedMult, sizeMult, score, colorShift }.
+9. Include powerups and arena { width, height }.
+` : '';
+
     const rpgInstructions = snapshot.genre === 'rpg' ? `
 RPG-SPECIFIC INSTRUCTIONS:
 6. Generate 4-6 interconnected rooms in rpg.rooms. Each room has: name, exits (object mapping direction to room ID), enemies (array of enemy type IDs), items (array of item IDs), npcs (array of NPC IDs), wallColor (hex), floorColor (hex).
@@ -212,7 +237,7 @@ INSTRUCTIONS:
 3. Adjust physics/gameplay numbers to match the requested difficulty and notes.
 4. Ensure "colors" contains valid hex codes.
 5. Do not add new top-level keys. You can adjust values within the existing structure.
-${rpgInstructions}${tdInstructions}${racingInstructions}${storyInstructions}`;
+${arenaInstructions}${rpgInstructions}${tdInstructions}${racingInstructions}${storyInstructions}`;
 
     const text = await provider.generateText(prompt);
     clearInterval(spinner);
@@ -239,10 +264,11 @@ const config = ${jsonString};
 export default config;
 `;
 
-  } catch (error) {
+  } catch (error: unknown) {
     if (spinner) clearInterval(spinner);
     process.stdout.write('\r' + ' '.repeat(60) + '\r');
     console.error(chalk.yellow('   ⚠️ AI generation failed, falling back to static config.'));
+    if (error instanceof Error) console.error(chalk.dim(error.message));
     return null;
   }
 }

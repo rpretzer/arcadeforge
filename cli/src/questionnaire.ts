@@ -36,6 +36,8 @@ const GENRE_NAMES: Record<Genre, string> = {
 
 const VIBE_NAMES: Record<Vibe, string> = {
   retro: 'Retro — dark backgrounds, bold pixel-era colors',
+  nes: 'NES Era — limited palette, warm reds & greens',
+  snes: 'SNES Era — richer purples & blues',
   cozy: 'Cozy — warm pastels, friendly feel',
   dark: 'Dark — muted tones, moody atmosphere',
   neon: 'Neon — black background, glowing bright colors',
@@ -69,6 +71,8 @@ export async function runQuestionnaire(): Promise<QuestionnaireAnswers> {
   const vibe = await select<Vibe>({
     message: "What's the vibe?",
     choices: [
+      { value: 'nes' as const, name: VIBE_NAMES.nes },
+      { value: 'snes' as const, name: VIBE_NAMES.snes },
       { value: 'retro' as const, name: VIBE_NAMES.retro },
       { value: 'neon' as const, name: VIBE_NAMES.neon },
       { value: 'cozy' as const, name: VIBE_NAMES.cozy },

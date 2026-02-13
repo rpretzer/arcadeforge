@@ -1,13 +1,17 @@
 import { createServerClient as createSupabaseServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { verifyAdminSession } from "@/lib/admin-auth";
 
 export async function POST(request: Request) {
   try {
-    // Verify admin session
+    // Verify admin session (must validate token against stored hash)
     const cookieStore = await cookies();
-    const session = cookieStore.get("admin_session");
-    if (!session?.value) {
+    const sessionToken = cookieStore.get("admin_session")?.value;
+    const sessionCheck = cookieStore.get("admin_session_check")?.value;
+
+    const isValid = await verifyAdminSession(sessionToken, sessionCheck);
+    if (!isValid) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -43,11 +47,9 @@ export async function POST(request: Request) {
     if (error) throw error;
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Moderate error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 }
-    );
+    const message = error instanceof Error ? error.message : "Internal server error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

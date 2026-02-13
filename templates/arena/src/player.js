@@ -81,10 +81,15 @@ export function draw() {
   } else {
     const color = blink ? 'rgba(255,255,255,0.6)' : config.colors.player;
 
-    if (style === 'pixel') {
-      // Pixel style: sharp-edged, no shadow, integer-snapped
+    if (style === 'pixel' || config.visual.retroEra) {
+      const half = Math.round(sz / 2);
+      if (config.visual.retroEra) {
+        ctx.strokeStyle = config.visual.outlineColor || '#0a0a14';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-half - 1, -half - 1, sz + 2, sz + 2);
+      }
       ctx.fillStyle = color;
-      ctx.fillRect(Math.round(-sz / 2), Math.round(-sz / 2), sz, sz);
+      ctx.fillRect(-half, -half, sz, sz);
     } else if (style === 'hand-drawn') {
       // Hand-drawn style: wobble, thick stroke, opacity variation
       ctx.globalAlpha = blink ? 0.5 : (0.85 + Math.random() * 0.15);

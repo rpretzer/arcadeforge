@@ -1,5 +1,5 @@
 export type Genre = 'runner' | 'arena' | 'puzzle' | 'story' | 'rpg' | 'tower-defense' | 'racing';
-export type Vibe = 'retro' | 'cozy' | 'dark' | 'neon' | 'minimal';
+export type Vibe = 'retro' | 'cozy' | 'dark' | 'neon' | 'minimal' | 'nes' | 'snes';
 export type PlayerCount = 'single' | '2-local' | 'leaderboard-async';
 export type SessionLength = 'short' | 'medium';
 export type InputMethod = 'keyboard' | 'touch' | 'gamepad';
@@ -108,6 +108,20 @@ const VIBE_PALETTES: Record<Vibe, ColorPalette> = {
     secondary: '#16213e',
     accent: '#0f3460',
     text: '#eaeaea',
+  },
+  nes: {
+    background: '#1a0a2e',
+    primary: '#c03030',
+    secondary: '#306030',
+    accent: '#6090c0',
+    text: '#e8e0d0',
+  },
+  snes: {
+    background: '#1a1a3e',
+    primary: '#8866aa',
+    secondary: '#446688',
+    accent: '#aa88cc',
+    text: '#e8e0e8',
   },
   cozy: {
     background: '#fef6e4',

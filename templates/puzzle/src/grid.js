@@ -680,33 +680,46 @@ function drawPiece(ctx, cell, size) {
   } else if (sprite) {
     ctx.drawImage(sprite, cell.x + 2, cell.y + 2, size - 4, size - 4);
   } else {
-    // Shadow
-    ctx.shadowColor = color;
-    ctx.shadowBlur = CONFIG.visual.shadowBlur;
+    const retro = CONFIG.visual?.retroEra;
+    const outline = CONFIG.visual?.outlineColor || '#0a0a14';
+
+    if (!retro) {
+      ctx.shadowColor = color;
+      ctx.shadowBlur = CONFIG.visual.shadowBlur;
+    }
 
     ctx.fillStyle = color;
 
-    if (CONFIG.visual.style === 'circle') {
+    if (CONFIG.visual.style === 'circle' && !retro) {
       ctx.beginPath();
       ctx.arc(cx, cy, size / 2 - 2, 0, Math.PI * 2);
       ctx.fill();
+    } else if (retro) {
+      const px = Math.round(cell.x + 2);
+      const py = Math.round(cell.y + 2);
+      const w = size - 4;
+      const h = size - 4;
+      ctx.strokeStyle = outline;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(px - 1, py - 1, w + 2, h + 2);
+      ctx.fillRect(px, py, w, h);
     } else {
-      // Rounded square
       roundRect(ctx, cell.x + 2, cell.y + 2, size - 4, size - 4, CONFIG.visual.cornerRadius);
       ctx.fill();
     }
 
-    // Inner highlight
     ctx.shadowBlur = 0;
-    ctx.globalAlpha = cell.opacity * 0.35;
-    ctx.fillStyle = '#fff';
-    if (CONFIG.visual.style === 'circle') {
-      ctx.beginPath();
-      ctx.arc(cx - size * 0.12, cy - size * 0.12, size * 0.22, 0, Math.PI * 2);
-      ctx.fill();
-    } else {
-      roundRect(ctx, cell.x + 6, cell.y + 6, size * 0.35, size * 0.25, 4);
-      ctx.fill();
+    if (!retro) {
+      ctx.globalAlpha = cell.opacity * 0.35;
+      ctx.fillStyle = '#fff';
+      if (CONFIG.visual.style === 'circle') {
+        ctx.beginPath();
+        ctx.arc(cx - size * 0.12, cy - size * 0.12, size * 0.22, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        roundRect(ctx, cell.x + 6, cell.y + 6, size * 0.35, size * 0.25, 4);
+        ctx.fill();
+      }
     }
   }
 

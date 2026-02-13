@@ -112,6 +112,21 @@ const config = {
     style: 'geometric',
   },
 
+  juice: {
+    screenShake: true,
+    shakeOnKill: 0.2,
+    projectileTrail: true,
+  },
+
+  towerOptions: {
+    sellRefund: 0.6,
+    synergies: true,
+  },
+
+  waves: {
+    showPreview: true, // show next wave composition
+  },
+
   game: {
     title: 'Tower Defense',
     startingLives: 15,

@@ -8,9 +8,9 @@
  */
 
 import config from './config.js';
-import { init as initPlayer, update as updatePlayer, draw as drawPlayer, jump, getHitbox, reset as resetPlayer } from './player.js';
+import { init as initPlayer, update as updatePlayer, draw as drawPlayer, jump, setJumpKeyHeld, getHitbox, reset as resetPlayer } from './player.js';
 import { init as initObstacles, update as updateObstacles, draw as drawObstacles, checkCollision, getSpeed, reset as resetObstacles } from './obstacles.js';
-import { init as initScoring, update as updateScoring, draw as drawScoring, getScore, getHighScore, reset as resetScoring } from './scoring.js';
+import { init as initScoring, update as updateScoring, addCollectible, addNearMiss, draw as drawScoring, getScore, getHighScore, reset as resetScoring } from './scoring.js';
 import { init as initCollectibles, update as updateCollectibles, draw as drawCollectibles, setCanvas as setCollectiblesCanvas, reset as resetCollectibles } from './collectibles.js';
 import { init as initPowerups, update as updatePowerups, draw as drawPowerups, drawHUD as drawPowerupHUD, drawShieldEffect, getSpeedMultiplier, hasShield, consumeShield, setCanvas as setPowerupsCanvas, reset as resetPowerups } from './powerups.js';
 
@@ -25,10 +25,9 @@ let firstInput = false;
 let farLayer = [];
 let nearLayer = [];
 
-// Screen shake
+// Screen shake (juice)
 let shakeTimer = 0;
-const SHAKE_DURATION = 300; // ms
-const SHAKE_INTENSITY = 5;
+const SHAKE_DURATION = 300;
 
 // ---- Public API ----------------------------------------------------------
 
@@ -65,33 +64,35 @@ export function update(delta, canvas) {
   const adjustedDelta = delta * speedMult;
 
   updatePlayer(adjustedDelta, canvas);
-  updateObstacles(adjustedDelta, canvas);
+  const nearMisses = updateObstacles(adjustedDelta, canvas);
   updateScoring(adjustedDelta);
 
   const gameSpeed = getSpeed();
   const playerBounds = getHitbox();
 
-  // Update collectibles - points returned on collect
-  const points = updateCollectibles(adjustedDelta, playerBounds, gameSpeed);
-  if (points && points.length > 0) {
-    for (const p of points) {
-      updateScoring(p / 10); // scale to scoring units
+  // Near-miss bonuses
+  if (nearMisses && nearMisses.length > 0) {
+    for (const nm of nearMisses) {
+      addNearMiss(nm.points, nm.x, nm.y);
     }
   }
 
-  // Update powerups
-  updatePowerups(adjustedDelta, playerBounds, gameSpeed);
+  // Collectibles - combo-based scoring
+  const collected = updateCollectibles(adjustedDelta, playerBounds, gameSpeed);
+  if (collected && collected.length > 0) {
+    for (const c of collected) {
+      addCollectible(c.points, c.x, c.y);
+    }
+  }
 
-  // Update parallax
+  updatePowerups(adjustedDelta, playerBounds, gameSpeed);
   updateParallax(adjustedDelta, gameSpeed);
 
-  // Tick screen shake
   if (shakeTimer > 0) {
     shakeTimer -= adjustedDelta * (1000 / 60);
     if (shakeTimer < 0) shakeTimer = 0;
   }
 
-  // Collision check
   if (checkCollision()) {
     if (hasShield()) {
       consumeShield();
@@ -103,11 +104,13 @@ export function update(delta, canvas) {
 }
 
 export function draw(ctx, canvas) {
-  // Apply screen shake offset
+  const juice = cfg.juice || {};
+  const shakeEnabled = juice.screenShake !== false;
+  const shakeIntensity = (juice.shakeIntensity ?? 1) * 5;
   let shakeX = 0, shakeY = 0;
-  if (shakeTimer > 0) {
-    shakeX = (Math.random() - 0.5) * 2 * SHAKE_INTENSITY;
-    shakeY = (Math.random() - 0.5) * 2 * SHAKE_INTENSITY;
+  if (shakeTimer > 0 && shakeEnabled) {
+    shakeX = (Math.random() - 0.5) * 2 * shakeIntensity;
+    shakeY = (Math.random() - 0.5) * 2 * shakeIntensity;
   }
 
   ctx.save();
@@ -115,7 +118,6 @@ export function draw(ctx, canvas) {
     ctx.translate(shakeX, shakeY);
   }
 
-  // Background
   ctx.fillStyle = cfg.colors.background;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -160,6 +162,10 @@ export function draw(ctx, canvas) {
     drawGameOver(ctx, canvas);
   }
 
+  if (cfg.visual?.scanlines && state !== 'menu') {
+    drawScanlines(ctx, canvas);
+  }
+
   ctx.restore();
 }
 
@@ -176,20 +182,22 @@ export function handleInput(type, event) {
         paused = !paused;
         return;
       }
-    }
-
-    if (state === 'menu') {
-      if (code === 'Space' || code === 'ArrowUp') {
-        startGame();
-      }
-    } else if (state === 'playing') {
-      if (!paused && (code === 'Space' || code === 'ArrowUp')) {
+      if ((code === 'Space' || code === 'ArrowUp') && !paused) {
+        setJumpKeyHeld(true);
         jump();
       }
-    } else if (state === 'gameover') {
-      if (code === 'KeyR') {
-        restartGame();
-      }
+    }
+
+    if (state === 'menu' && (code === 'Space' || code === 'ArrowUp')) {
+      startGame();
+    } else if (state === 'gameover' && code === 'KeyR') {
+      restartGame();
+    }
+  }
+
+  if (type === 'keyup') {
+    if (event.code === 'Space' || event.code === 'ArrowUp') {
+      setJumpKeyHeld(false);
     }
   }
 
@@ -200,8 +208,10 @@ export function handleInput(type, event) {
     }
     if (state === 'menu') {
       startGame();
-    } else if (state === 'playing') {
-      if (!paused) jump();
+    } else if (state === 'playing' && !paused) {
+      setJumpKeyHeld(true);
+      jump();
+      setTimeout(() => setJumpKeyHeld(false), 100);
     } else if (state === 'gameover') {
       restartGame();
     }
@@ -276,20 +286,29 @@ function updateParallax(delta, gameSpeed) {
   }
 }
 
+function drawScanlines(ctx, canvas) {
+  ctx.save();
+  ctx.globalAlpha = 0.06;
+  ctx.fillStyle = '#000';
+  for (let y = 0; y < canvas.height; y += 4) {
+    ctx.fillRect(0, y, canvas.width, 2);
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
 function drawParallax(ctx, canvas) {
-  // Far layer
+  const farAlpha = cfg.visual.parallaxFar ?? 0.25;
+  const nearAlpha = cfg.visual.parallaxNear ?? 0.35;
   ctx.fillStyle = cfg.colors.ground;
-  ctx.globalAlpha = 0.12;
+  ctx.globalAlpha = farAlpha;
   for (const s of farLayer) {
     ctx.fillRect(s.x, s.y, s.w, s.h);
   }
-
-  // Near layer
-  ctx.globalAlpha = 0.2;
+  ctx.globalAlpha = nearAlpha;
   for (const s of nearLayer) {
     ctx.fillRect(s.x, s.y, s.w, s.h);
   }
-
   ctx.globalAlpha = 1;
 }
 
@@ -349,7 +368,8 @@ function drawControlHints(ctx, canvas) {
   ctx.font        = '14px sans-serif';
   ctx.textAlign   = 'left';
   ctx.textBaseline = 'bottom';
-  ctx.fillText('SPACE: Jump | P: Pause', 12, canvas.height - 12);
+  const hint = cfg.player.doubleJump ? 'SPACE: Jump (hold high) | P: Pause' : 'SPACE: Jump | P: Pause';
+  ctx.fillText(hint, 12, canvas.height - 12);
   ctx.restore();
 }
 

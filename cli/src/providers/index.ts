@@ -9,7 +9,7 @@ import { createOllamaProvider } from './ollama.js';
 
 export type { LLMProvider, ChatSession, ProviderConfig } from './types.js';
 
-const DEFAULT_MODELS: Record<ProviderConfig['provider'], string> = {
+export const DEFAULT_MODELS: Record<ProviderConfig['provider'], string> = {
   google: 'gemini-2.0-flash',
   openai: 'gpt-4o',
   anthropic: 'claude-sonnet-4-5-20250929',
@@ -52,10 +52,12 @@ export function resolveProviderConfig(): ProviderConfig | null {
     const raw = readFileSync(configPath, 'utf-8');
     const fileConfig = JSON.parse(raw) as Partial<ProviderConfig>;
     if (fileConfig.provider) {
+      // Prefer env vars over file for API keys (more secure)
+      const apiKey = getApiKeyForProvider(fileConfig.provider) ?? fileConfig.apiKey;
       return {
         provider: fileConfig.provider,
         model: envModel || fileConfig.model || DEFAULT_MODELS[fileConfig.provider],
-        apiKey: fileConfig.apiKey || getApiKeyForProvider(fileConfig.provider),
+        apiKey,
         baseUrl: fileConfig.baseUrl,
       };
     }

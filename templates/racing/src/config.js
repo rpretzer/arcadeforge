@@ -22,6 +22,7 @@ const config = {
     braking: 0.1,
     turnSpeed: 0.035,
     size: 16,
+    driftBoost: 1.15,
   },
 
   track: {
@@ -46,6 +47,13 @@ const config = {
 
   race: {
     lapCount: 3,
+    showLapTimes: true,
+    showPosition: true,
+  },
+
+  juice: {
+    screenShake: true,
+    shakeOnCollision: 0.4,
   },
 
   visual: {

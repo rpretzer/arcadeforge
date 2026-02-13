@@ -33,7 +33,13 @@ const config = {
   },
 
   transitions: {
-    fadeDuration: 0.3,  // seconds
+    fadeDuration: 0.3,
+    type: 'fade',       // 'fade' | 'slide' | 'none'
+  },
+
+  juice: {
+    sceneTransition: true,
+    typewriterSound: false,
   },
 
   autoAdvance: {

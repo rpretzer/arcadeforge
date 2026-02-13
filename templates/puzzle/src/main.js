@@ -47,6 +47,10 @@ import { loadAssets } from './assets.js';
 
 async function start() {
   await loadAssets();
+  if (CONFIG.visual?.retroEra) {
+    canvas.style.imageRendering = 'pixelated';
+    canvas.style.imageRendering = 'crisp-edges';
+  }
   const { w, h } = resize();
 
   Scoring.init();

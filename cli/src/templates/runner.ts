@@ -20,6 +20,7 @@ const config = {
   physics: {
     gravity: ${m.gravity},
     jumpForce: ${m.jumpForce},
+    jumpForceShort: -7,
     baseSpeed: ${m.baseSpeed},
     speedIncrement: ${m.speedIncrement},
   },
@@ -29,6 +30,9 @@ const config = {
     maxHeight: 60,
     width: 25,
     gap: 200,
+    nearMissMargin: 25,
+    nearMissPoints: 15,
+    usePatterns: true,
     types: [
       { id: 'block', width: 25, heightRange: [30, 60], color: '${c.accent}' },
       { id: 'spike', width: 30, heightRange: [35, 50], color: '#ff4444' },
@@ -50,15 +54,33 @@ const config = {
       slowmo: 10000,
     },
   },
+  scoring: {
+    timeBonus: 0.5,
+    comboDecayTime: 1.5,
+    comboMultiplier: 0.5,
+  },
   player: {
     width: 40,
     height: 40,
     groundOffset: 60,
+    doubleJump: true,
   },
   visual: {
-    style: '${snapshot.visualStyle}',
+    style: '${['nes', 'snes'].includes(snapshot.vibe) ? 'pixel' : snapshot.visualStyle}',
     cornerRadius: ${snapshot.visualStyle === 'pixel' ? 0 : snapshot.visualStyle === 'hand-drawn' ? 12 : 8},
     shadowBlur: ${snapshot.vibe === 'minimal' ? 0 : 10},
+    parallaxFar: 0.25,
+    parallaxNear: 0.35,
+    retroEra: ${['nes', 'snes'].includes(snapshot.vibe) ? `'${snapshot.vibe}'` : 'null'},
+    scanlines: ${['nes', 'snes'].includes(snapshot.vibe) ? 'true' : 'false'},
+    outlineColor: '#0a0a14',
+  },
+  juice: {
+    screenShake: true,
+    shakeIntensity: 1,
+    particleBurst: true,
+    scorePop: true,
+    hitPause: 0,
   },
   game: {
     title: '${escapeJsString(snapshot.title)}',

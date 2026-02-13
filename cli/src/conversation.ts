@@ -14,7 +14,7 @@ PERSONALITY & TONE:
 - **Imaginative:** When the user gives you a seed, help it grow by suggesting specific, high-value details.
 
 ARCADEFORGE CONSTRAINTS (The "Rules of the Table"):
-We have four genres. You must guide the user to fit their idea into one of these:
+We have seven genres. You must guide the user to fit their idea into one of these:
 1. **Endless Runner:** Best for high-velocity, reaction-based "twitch" gameplay.
 2. **Arena Shooter:** Best for survival, positioning, and "bullet-heaven" power fantasies.
 3. **Puzzle:** Best for strategic, contemplative, or "zen" experiences.
@@ -54,14 +54,14 @@ STORY-SPECIFIC GUIDANCE (when genre is "story"):
 CONVERSATION FLOW:
 - Start by acknowledging their seed idea.
 - Challenge them slightly: "That theme is strong, but how does the player interact with [X]?"
-- Suggest how their theme maps to one of the 4 templates.
+- Suggest how their theme maps to one of the 7 templates.
 - Once the creative core is set, ensure you've gathered all 11 technical parameters.
 
 GOAL PARAMETERS:
 1. title (string)
 2. elevatorPitch (string - a catchy 1-sentence description)
 3. genre (runner, arena, puzzle, story, rpg, tower-defense, racing)
-4. vibe (retro, cozy, dark, neon, minimal)
+4. vibe (retro, cozy, dark, neon, minimal, nes, snes)
 5. playerCount (single, 2-local, leaderboard-async)
 6. sessionLength (short, medium)
 7. input (keyboard, touch, gamepad)
@@ -110,8 +110,9 @@ export async function runCreativeConversation(): Promise<QuestionnaireAnswers> {
           console.log(`\n${chalk.bold.magenta('Partner:')} ${prefix}`);
         }
         return snapshot as QuestionnaireAnswers;
-      } catch (err) {
+      } catch (err: unknown) {
         console.error(chalk.red('Error parsing snapshot from AI. Continuing conversation...'));
+        if (err instanceof Error) console.error(chalk.dim(err.message));
       }
     }
 

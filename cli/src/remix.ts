@@ -1,11 +1,9 @@
 import fse from 'fs-extra';
 import path from 'node:path';
 import chalk from 'chalk';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { GameDesignSnapshot } from './snapshot.js';
 import { validateConfig } from './validation.js';
-
-const API_KEY = process.env.GOOGLE_API_KEY;
+import { createProvider, resolveProviderConfig } from './providers/index.js';
 
 export async function runRemix(dir: string = '.') {
   const targetDir = path.resolve(dir);
@@ -18,13 +16,14 @@ export async function runRemix(dir: string = '.') {
     return;
   }
 
-  if (!API_KEY) {
-    console.error(chalk.red('\n❌ GOOGLE_API_KEY is required for remixing.'));
+  const providerConfig = resolveProviderConfig();
+  if (!providerConfig) {
+    console.error(chalk.red('\n❌ No AI provider configured. Run "arcadeforge config" to set up.'));
     return;
   }
 
   const snapshot: GameDesignSnapshot = await fse.readJSON(snapshotPath);
-  let feedback: any[] = [];
+  let feedback: { note: string }[] = [];
   if (await fse.pathExists(feedbackPath)) {
     feedback = await fse.readJSON(feedbackPath);
   }
@@ -35,10 +34,8 @@ export async function runRemix(dir: string = '.') {
     return;
   }
 
-  console.log(chalk.magenta('\n🌀 Remixing "' + snapshot.title + '" based on ' + feedback.length + ' notes...'));
-
-  const genAI = new GoogleGenerativeAI(API_KEY);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  const provider = createProvider(providerConfig);
+  console.log(chalk.magenta(`\n🌀 Remixing "${snapshot.title}" based on ${feedback.length} notes (using ${provider.name})...`));
 
   const feedbackSummary = feedback.map(f => `- ${f.note}`).join('\n');
 
@@ -61,9 +58,7 @@ export async function runRemix(dir: string = '.') {
     `;
 
   try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    const text = await provider.generateText(prompt);
     const jsonString = text.replace(/```json/g, '').replace(/```/g, '').trim();
     
     // Parse and validate against genre-specific schema
@@ -80,7 +75,7 @@ export async function runRemix(dir: string = '.') {
       await fse.copy(configPath, configBackupPath);
       console.log(chalk.dim('   Backed up existing config to config.backup.js'));
     }
-    const configContent = `// Game configuration — REMIXED by Gemini 2.0 Flash
+    const configContent = `// Game configuration — REMIXED by ${provider.name}
 // Based on feedback: ${feedback.length} notes
 
 const config = ${jsonString};
@@ -97,8 +92,8 @@ export default config;
     console.log(chalk.green('\n✅ Remix complete! Check your game at http://localhost:3000'));
     console.log(chalk.dim('   Original feedback archived to ' + path.basename(archivePath)));
 
-  } catch (err) {
+  } catch (err: unknown) {
     console.error(chalk.red('\n❌ Remix failed.'));
-    console.error(err);
+    console.error(err instanceof Error ? err.message : err);
   }
 }

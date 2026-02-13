@@ -36,6 +36,10 @@ function getTemplateConfig(snapshot: GameDesignSnapshot): string {
       return getTowerDefenseConfig(snapshot);
     case 'racing':
       return getRacingConfig(snapshot);
+    default: {
+      const _exhaustive: never = snapshot.genre;
+      throw new Error(`Unknown genre: ${(_exhaustive as string)}`);
+    }
   }
 }
 

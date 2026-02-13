@@ -1,19 +1,21 @@
 /**
  * player.js - Player character with physics.
  *
- * Gravity, jumping (SPACE / UP / tap), ground collision.
+ * Gravity, variable-height jump (hold = high, tap = short), double jump.
  * Draws the player as a coloured rectangle with rounded corners and shadow.
  */
 
 import config from './config.js';
 import { getAsset } from './assets.js';
 
-let cfg    = null;
-let x      = 0;
-let y      = 0;
-let vy     = 0;      // vertical velocity
+let cfg = null;
+let x = 0;
+let y = 0;
+let vy = 0;
 let groundY = 0;
 let onGround = true;
+let jumpKeyHeld = false;
+let doubleJumpUsed = false;
 
 // ---- Public API ----------------------------------------------------------
 
@@ -24,26 +26,32 @@ export function init(canvas, overrideConfig) {
 
 export function update(delta, canvas) {
   groundY = canvas.height - cfg.player.groundOffset;
-  x = 80;   // player stays at fixed x
+  x = 80;
+
+  // Variable jump: cut upward velocity when jump key released
+  if (!jumpKeyHeld && vy < 0 && !onGround) {
+    vy = Math.max(vy, cfg.physics.jumpForceShort || -7);
+  }
 
   // Apply gravity
   vy += cfg.physics.gravity * delta;
-  y  += vy * delta;
+  y += vy * delta;
 
   // Ground collision
   const bottom = groundY - cfg.player.height;
   if (y >= bottom) {
-    y  = bottom;
+    y = bottom;
     vy = 0;
     onGround = true;
+    doubleJumpUsed = false;
   } else {
     onGround = false;
   }
 }
 
 export function draw(ctx) {
-  const w  = cfg.player.width;
-  const h  = cfg.player.height;
+  const w = cfg.player.width;
+  const h = cfg.player.height;
   const sprite = getAsset('player');
   const style = cfg.visual.style || 'geometric';
 
@@ -54,19 +62,23 @@ export function draw(ctx) {
 
   ctx.save();
 
-  if (style === 'pixel') {
-    // Pixel style: sharp edges, no shadows, integer-snapped positions
+  if (style === 'pixel' || cfg.visual.retroEra) {
     const px = Math.round(x);
     const py = Math.round(y);
+    const outline = cfg.visual.outlineColor || '#0a0a14';
+    if (cfg.visual.retroEra) {
+      ctx.strokeStyle = outline;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(px - 1, py - 1, w + 2, h + 2);
+    }
     ctx.fillStyle = cfg.colors.player;
     ctx.fillRect(px, py, w, h);
   } else if (style === 'hand-drawn') {
-    // Hand-drawn style: wobble corners, thick stroke, slight opacity variation
     ctx.globalAlpha = 0.85 + Math.random() * 0.15;
     ctx.strokeStyle = cfg.colors.player;
     ctx.lineWidth = 3;
     ctx.fillStyle = cfg.colors.player;
-    const wb = 2; // wobble amount
+    const wb = 2;
     ctx.beginPath();
     ctx.moveTo(x + rnd(wb), y + rnd(wb));
     ctx.lineTo(x + w + rnd(wb), y + rnd(wb));
@@ -76,10 +88,9 @@ export function draw(ctx) {
     ctx.fill();
     ctx.stroke();
   } else {
-    // Geometric (default): rounded rect with shadow
     const r = cfg.visual.cornerRadius;
-    ctx.shadowColor   = cfg.colors.player;
-    ctx.shadowBlur    = cfg.visual.shadowBlur;
+    ctx.shadowColor = cfg.colors.player;
+    ctx.shadowBlur = cfg.visual.shadowBlur;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 4;
     ctx.fillStyle = cfg.colors.player;
@@ -89,16 +100,14 @@ export function draw(ctx) {
 
   ctx.restore();
 
-  // Eye detail (gives personality)
+  // Eye detail
   const eyeSize = 5;
-  const eyeX    = x + w - 12;
-  const eyeY    = y + 12;
+  const eyeX = x + w - 12;
+  const eyeY = y + 12;
   ctx.fillStyle = cfg.colors.background;
   ctx.beginPath();
   ctx.arc(eyeX, eyeY, eyeSize, 0, Math.PI * 2);
   ctx.fill();
-
-  // Pupil
   ctx.fillStyle = cfg.colors.text;
   ctx.beginPath();
   ctx.arc(eyeX + 1, eyeY, 2, 0, Math.PI * 2);
@@ -106,20 +115,33 @@ export function draw(ctx) {
 }
 
 export function jump() {
-  if (!onGround) return;
-  vy = cfg.physics.jumpForce;
-  onGround = false;
+  if (onGround) {
+    jumpKeyHeld = true;
+    vy = cfg.physics.jumpForce;
+    onGround = false;
+  } else if (cfg.player.doubleJump && !doubleJumpUsed) {
+    doubleJumpUsed = true;
+    jumpKeyHeld = true;
+    vy = cfg.physics.jumpForce * 0.85;
+  }
+}
+
+export function setJumpKeyHeld(held) {
+  jumpKeyHeld = held;
 }
 
 export function getHitbox() {
-  // Slightly inset for fairness
   const inset = 4;
   return {
-    x:      x + inset,
-    y:      y + inset,
-    width:  cfg.player.width  - inset * 2,
+    x: x + inset,
+    y: y + inset,
+    width: cfg.player.width - inset * 2,
     height: cfg.player.height - inset * 2,
   };
+}
+
+export function getPosition() {
+  return { x, y };
 }
 
 export function reset(canvas) {
@@ -129,21 +151,19 @@ export function reset(canvas) {
 // ---- Helpers -------------------------------------------------------------
 
 function resetPosition(canvas) {
-  groundY  = canvas.height - cfg.player.groundOffset;
-  x        = 80;
-  y        = groundY - cfg.player.height;
-  vy       = 0;
+  groundY = canvas.height - cfg.player.groundOffset;
+  x = 80;
+  y = groundY - cfg.player.height;
+  vy = 0;
   onGround = true;
+  jumpKeyHeld = false;
+  doubleJumpUsed = false;
 }
 
-/** Return a random offset in the range [-amount, +amount]. */
 function rnd(amount) {
   return (Math.random() - 0.5) * 2 * amount;
 }
 
-/**
- * Draw a rounded rectangle path (does NOT fill/stroke - caller does that).
- */
 function roundRect(ctx, rx, ry, rw, rh, radius) {
   radius = Math.min(radius, rw / 2, rh / 2);
   ctx.beginPath();

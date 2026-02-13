@@ -52,9 +52,12 @@ const config = {
     height: ${m.arenaHeight},
   },
   visual: {
-    style: '${snapshot.visualStyle}',
-    cornerRadius: ${snapshot.visualStyle === 'pixel' ? 0 : 4},
+    style: '${['nes', 'snes'].includes(snapshot.vibe) ? 'pixel' : snapshot.visualStyle}',
+    cornerRadius: ${snapshot.visualStyle === 'pixel' || ['nes', 'snes'].includes(snapshot.vibe) ? 0 : 4},
     shadowBlur: ${snapshot.vibe === 'minimal' ? 0 : 8},
+    retroEra: ${['nes', 'snes'].includes(snapshot.vibe) ? `'${snapshot.vibe}'` : 'null'},
+    scanlines: ${['nes', 'snes'].includes(snapshot.vibe) ? 'true' : 'false'},
+    outlineColor: '#0a0a14',
   },
   game: {
     title: '${escapeJsString(snapshot.title)}',

@@ -5,16 +5,10 @@ import { mkdirpSync } from 'fs-extra';
 import { select, input } from '@inquirer/prompts';
 import chalk from 'chalk';
 import type { ProviderConfig } from './providers/types.js';
+import { DEFAULT_MODELS } from './providers/index.js';
 
 const CONFIG_DIR = join(homedir(), '.arcadeforge');
 const CONFIG_PATH = join(CONFIG_DIR, 'config.json');
-
-const DEFAULT_MODELS: Record<ProviderConfig['provider'], string> = {
-  google: 'gemini-2.0-flash',
-  openai: 'gpt-4o',
-  anthropic: 'claude-sonnet-4-5-20250929',
-  ollama: 'llama3',
-};
 
 export function loadConfig(): ProviderConfig | null {
   try {
@@ -66,7 +60,8 @@ export async function getOrPromptConfig(forceReprompt = false): Promise<Provider
     }
   } else {
     const keyInput = await input({
-      message: `API key for ${provider} (leave blank to use env var)`,
+      message: `API key for ${provider} (leave blank to use env var — preferred for security)`,
+      default: '',
     });
     if (keyInput.trim()) {
       apiKey = keyInput.trim();
@@ -82,6 +77,9 @@ export async function getOrPromptConfig(forceReprompt = false): Promise<Provider
 
   saveConfig(config);
   console.log(chalk.green(`\n  Configuration saved to ${CONFIG_PATH}`));
+  if (apiKey) {
+    console.log(chalk.dim('   Note: API keys in config are stored in plain text. Prefer env vars (e.g. GOOGLE_API_KEY) for better security.'));
+  }
 
   return config;
 }

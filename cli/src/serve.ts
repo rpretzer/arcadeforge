@@ -109,28 +109,37 @@ export async function serveGame(dir: string = '.'): Promise<void> {
       req.on('data', chunk => body += chunk);
       req.on('end', async () => {
         try {
-          const data = JSON.parse(body);
+          const data = JSON.parse(body || '{}');
+          const note = typeof data?.note === 'string' ? data.note.trim() : '';
+          if (!note) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'note is required and must be a non-empty string' }));
+            return;
+          }
+
           const feedbackPath = path.join(targetDir, FEEDBACK_FILE);
-          
-          let currentFeedback: any[] = [];
+          let currentFeedback: { note: string; timestamp?: string }[] = [];
           if (existsSync(feedbackPath)) {
             const content = await fs.readFile(feedbackPath, 'utf-8');
             try {
-              currentFeedback = JSON.parse(content);
-              if (!Array.isArray(currentFeedback)) currentFeedback = [];
+              const parsed = JSON.parse(content);
+              currentFeedback = Array.isArray(parsed) ? parsed : [];
             } catch {
               // file exists but is corrupt/empty, start fresh
             }
           }
 
-          currentFeedback.push(data);
+          currentFeedback.push({
+            note,
+            timestamp: typeof data?.timestamp === 'string' ? data.timestamp : new Date().toISOString(),
+          });
           await fs.writeFile(feedbackPath, JSON.stringify(currentFeedback, null, 2));
-          
+
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ success: true }));
-          console.log(chalk.gray(`   📝 Feedback saved: "${data.note.substring(0, 40)}${data.note.length > 40 ? '...' : ''}"`));
+          console.log(chalk.gray(`   📝 Feedback saved: "${note.substring(0, 40)}${note.length > 40 ? '...' : ''}"`));
         } catch (err) {
-          res.writeHead(500);
+          res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Failed to save' }));
         }
       });

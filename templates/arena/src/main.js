@@ -68,6 +68,10 @@ import { loadAssets } from './assets.js';
 // ---------------------------------------------------------------------------
 async function start() {
   await loadAssets();
+  if (config.visual?.retroEra) {
+    canvas.style.imageRendering = 'pixelated';
+    canvas.style.imageRendering = 'crisp-edges';
+  }
   initGame(canvas, ctx);
   requestAnimationFrame(loop);
 }

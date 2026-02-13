@@ -183,6 +183,21 @@ export function draw(ctx) {
       drawGameOver(ctx);
       break;
   }
+
+  if (CONFIG.visual?.scanlines && currentState !== GameState.MENU) {
+    drawScanlines(ctx);
+  }
+}
+
+function drawScanlines(ctx) {
+  ctx.save();
+  ctx.globalAlpha = 0.06;
+  ctx.fillStyle = '#000';
+  for (let y = 0; y < canvasHeight; y += 4) {
+    ctx.fillRect(0, y, canvasWidth, 2);
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
 }
 
 // --- Menu ---
@@ -238,6 +253,17 @@ function drawMenu(ctx) {
 // --- Playing ---
 
 function drawPlaying(ctx, dimmed = false) {
+  const shake = CONFIG.juice?.screenShake !== false ? Scoring.getBoardShake() : 0;
+  const shakeIntensity = (CONFIG.juice?.shakeIntensity ?? 1) * 4;
+  let shakeX = 0, shakeY = 0;
+  if (shake > 0) {
+    shakeX = (Math.random() - 0.5) * 2 * shakeIntensity;
+    shakeY = (Math.random() - 0.5) * 2 * shakeIntensity;
+  }
+
+  ctx.save();
+  if (shakeX || shakeY) ctx.translate(shakeX, shakeY);
+
   if (dimmed) {
     ctx.globalAlpha = 0.3;
   }
@@ -296,6 +322,8 @@ function drawPlaying(ctx, dimmed = false) {
   if (dimmed) {
     ctx.globalAlpha = 1;
   }
+
+  ctx.restore();
 }
 
 // --- Pause & Hints ---

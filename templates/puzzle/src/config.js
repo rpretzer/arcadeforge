@@ -38,15 +38,26 @@ const CONFIG = {
   },
 
   visual: {
-    style: 'geometric',     // 'geometric' = rounded squares, 'circle' = circles
+    style: 'geometric',     // 'geometric' | 'circle' | 'pixel' (retro)
     cornerRadius: 8,
     shadowBlur: 6,
+    retroEra: null,        // 'nes' | 'snes' — pixelated, dark outlines
+    scanlines: false,
+    outlineColor: '#0a0a14',
   },
 
   animation: {
-    swapDuration: 200,       // ms
-    fallDuration: 300,       // ms
-    matchFlashDuration: 400, // ms
+    swapDuration: 200,
+    fallDuration: 300,
+    matchFlashDuration: 400,
+  },
+
+  juice: {
+    screenShake: true,
+    boardShakeOnCombo: 3,   // min combo to trigger board shake
+    shakeIntensity: 1,
+    match4Bonus: 1.5,        // multiplier for 4+ matches vs 3
+    match5Bonus: 2.5,
   },
 };
 
